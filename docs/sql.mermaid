@@ -1,0 +1,70 @@
+
+erDiagram
+	USERS {
+		bigInt id PK 
+		varchar email UK "unique email"
+		varchar password_hash  
+		varchar name  
+		varchar profile_picture_url    
+		timestamp created_at  
+		timestamp updated_at  
+	}
+	
+	CONVERSATIONS {
+		bigInt id PK 
+		varchar name  
+		bigInt created_by FK "who created this conversation"
+		timestamp created_at  
+		timestamp updated_at  
+	}
+	
+	CONVERSATION_PARTICIPANTS {
+		bigInt conversation_id FK 
+		bigInt user_id FK 
+		PK "conversation_id, user_id" "composite primary key"
+	}
+	
+	MESSAGES {
+		bigInt id PK 
+		text content  
+		varchar status "sent, delivered, read, failed"
+		timestamp created_at  
+		timestamp updated_at  
+		bigInt sender_id FK 
+		bigInt conversation_id FK 
+	}
+	
+	DRAFT_MESSAGES {
+		bigInt id PK 
+		text content  
+		bigInt conversation_id FK 
+		bigInt user_id FK "who is drafting"
+		timestamp created_at  
+		timestamp updated_at  
+	}
+	
+	SEND_MESSAGE_REQUESTS {
+		bigInt id PK 
+		bigInt message_id FK 
+		varchar status "pending, in_flight, failed"
+		timestamp last_sent_at  
+		int retry_count  
+		text error_message  
+		timestamp created_at  
+	}
+
+	%% Relationships
+	USERS ||--o{ CONVERSATIONS : "creates"
+	USERS ||--o{ CONVERSATION_PARTICIPANTS : "participates"
+	USERS ||--o{ MESSAGES : "sends"
+	USERS ||--o{ DRAFT_MESSAGES : "drafts"
+
+	CONVERSATIONS ||--o{ CONVERSATION_PARTICIPANTS : "has"
+	CONVERSATIONS ||--o{ MESSAGES : "contains"
+	CONVERSATIONS ||--o{ DRAFT_MESSAGES : "contains_drafts"
+	
+	MESSAGES ||--o{ SEND_MESSAGE_REQUESTS : "queued_as"
+	
+	%% Business Logic Constraints (enforce in application):
+	%% 1. Draft messages: user_id must exist in CONVERSATION_PARTICIPANTS for that conversation_id
+	%% 2. Conversations: created_by must be added to CONVERSATION_PARTICIPANTS automatically

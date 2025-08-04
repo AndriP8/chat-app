@@ -1,0 +1,49 @@
+---
+config:
+  theme: mc
+  layout: dagre
+  look: neo
+title: Chat App
+---
+erDiagram
+	direction LR
+	MESSAGES {
+		bigInt id PK ""  
+		varchar content  ""  
+		varchar status  ""  
+		timestamp created_at  ""  
+		bigInt sender_id FK ""  
+		bigInt conversation_id FK ""  
+	}
+	CONVERSATIONS {
+		bigInt id  ""  
+		varchar name  ""  
+	}
+	CONVERSATION_USER {
+		bigInt conversation_id FK ""  
+		bigInt user_id FK ""  
+	}
+	USERS {
+		bigInt id PK ""  
+		varchar name  ""  
+		varchar profile_picture_url  ""  
+	}
+	DRAFT_MESSAGE {
+		bigInt id PK ""  
+		varchar content  ""  
+		bigInt conversation_id FK ""  
+	}
+	SEND_MESSAGE_REQUEST {
+		bigInt id PK ""  
+		bigInt message_id FK ""  
+		varchar status  ""  
+		timestamp last_sent_at  ""  
+		int fail_count  ""  
+	}
+
+	USERS||--o{MESSAGES:"has"
+	USERS||--o{CONVERSATION_USER:"has"
+	MESSAGES||--o{SEND_MESSAGE_REQUEST:"has"
+	CONVERSATIONS||--o{MESSAGES:"has"
+	CONVERSATIONS||--o{CONVERSATION_USER:"has"
+	CONVERSATIONS||--o{DRAFT_MESSAGE:"has"
