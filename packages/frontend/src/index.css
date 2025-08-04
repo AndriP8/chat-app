@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Custom styles can be added here */
+body {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
