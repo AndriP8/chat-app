@@ -1,13 +1,12 @@
-import { config } from "dotenv";
+import "dotenv/config";
 import { drizzle } from "drizzle-orm/neon-http";
 import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
 import { neon } from "@neondatabase/serverless";
 import { Pool } from "pg";
-import * as schema from "./schema.js";
+import * as schema from "./schema";
+import { envConfig } from "@/config/env";
 
-config();
-
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = envConfig.DATABASE_URL;
 
 if (!DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is required");
@@ -31,4 +30,4 @@ if (isNeonDatabase) {
 }
 
 export { db };
-export * from "./schema.js";
+export * from "./schema";

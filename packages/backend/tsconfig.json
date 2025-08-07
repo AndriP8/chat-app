@@ -13,11 +13,11 @@
     "composite": true,
     "incremental": true,
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*", "drizzle.config.ts"],
-  "paths": {
-    "@/*": ["src/*"]
-  },
   "exclude": ["node_modules", "dist"]
 }
