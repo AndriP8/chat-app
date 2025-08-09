@@ -5,17 +5,15 @@ export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
-  code?: string;
-  message?: string;
+  details?: string;
+  hasMore?: boolean; // For pagination in messages
 }
 
 export class ApiError extends Error {
   status: number;
-  code?: string;
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number) {
     super(message);
     this.status = status;
-    this.code = code;
     this.name = "ApiError";
   }
 }
@@ -39,7 +37,7 @@ export async function makeRequest<T>(
   const config: RequestInit = {
     ...options,
     headers,
-    credentials: 'include', // Include cookies in requests
+    credentials: "include", // Include cookies in requests
   };
 
   try {
@@ -50,11 +48,7 @@ export async function makeRequest<T>(
     try {
       data = await response.json();
     } catch {
-      throw new ApiError(
-        "Invalid response format",
-        response.status,
-        "INVALID_RESPONSE",
-      );
+      throw new ApiError("Invalid response format", response.status);
     }
 
     // Handle non-2xx responses
@@ -62,17 +56,12 @@ export async function makeRequest<T>(
       throw new ApiError(
         data.error || `HTTP ${response.status}`,
         response.status,
-        data.code,
       );
     }
 
     // Handle API-level errors
     if (!data.success) {
-      throw new ApiError(
-        data.error || "Request failed",
-        response.status,
-        data.code,
-      );
+      throw new ApiError(data.error || "Request failed", response.status);
     }
 
     return data.data as T;
@@ -83,18 +72,13 @@ export async function makeRequest<T>(
 
     // Handle network errors
     if (error instanceof TypeError && error.message.includes("fetch")) {
-      throw new ApiError(
-        "Network error - please check your connection",
-        0,
-        "NETWORK_ERROR",
-      );
+      throw new ApiError("Network error - please check your connection", 0);
     }
 
     // Handle other errors
     throw new ApiError(
       error instanceof Error ? error.message : "Unknown error",
       0,
-      "UNKNOWN_ERROR",
     );
   }
 }
