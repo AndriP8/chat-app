@@ -72,7 +72,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           return reply.status(409).send({
             success: false,
             error: "User with this email already exists",
-            code: "USER_EXISTS",
           });
         }
 
@@ -93,7 +92,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           return reply.status(500).send({
             success: false,
             error: "Failed to create user",
-            code: "USER_CREATION_FAILED",
           });
         }
 
@@ -146,7 +144,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           return reply.status(401).send({
             success: false,
             error: "Invalid email or password",
-            code: "INVALID_CREDENTIALS",
           });
         }
 
@@ -158,7 +155,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           return reply.status(401).send({
             success: false,
             error: "Invalid email or password",
-            code: "INVALID_CREDENTIALS",
           });
         }
 
@@ -178,7 +174,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.status(500).send({
           success: false,
           error: "Login failed",
-          code: "LOGIN_FAILED",
         });
       }
     },
@@ -193,7 +188,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           return reply.status(401).send({
             success: false,
             error: "Authorization token required",
-            code: "NO_TOKEN",
           });
         }
 
@@ -210,7 +204,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           return reply.status(404).send({
             success: false,
             error: "User not found",
-            code: "USER_NOT_FOUND",
           });
         }
 
