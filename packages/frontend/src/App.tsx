@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/auth/AuthContext";
 import { AuthPage } from "@/components/auth/AuthPage";
 import ChatPage from "./components/chat/ChatPage";
 import { AuthGuard } from "./components/auth/AuthGuard";
+import { Navigation } from "./components/navigation/Navigation";
 
 function App() {
   return (
@@ -31,7 +32,10 @@ function App() {
               path="/chat"
               element={
                 <AuthGuard>
-                  <ChatPage />
+                  <div className="min-h-screen bg-gray-50">
+                    <Navigation />
+                    <ChatPage />
+                  </div>
                 </AuthGuard>
               }
             />
