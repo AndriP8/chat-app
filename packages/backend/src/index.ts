@@ -1,24 +1,26 @@
-import "dotenv/config";
-import Fastify from "fastify";
-import cors from "@fastify/cors";
-import websocket from "@fastify/websocket";
-import cookie from "@fastify/cookie";
-import { envConfig } from "@/config/env";
-import { healthRoutes } from "@/routes/health";
-import { authRoutes } from "@/routes/auth";
+import 'dotenv/config';
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import websocket from '@fastify/websocket';
+import cookie from '@fastify/cookie';
+import { envConfig } from '@/config/env';
+import { healthRoutes } from '@/routes/health';
+import { authRoutes } from '@/routes/auth';
+import { conversationRoutes } from '@/routes/conversations';
+import { websocketRoutes } from '@/routes/websocket';
 
 async function buildServer() {
   const fastify = Fastify({
     logger: {
-      level: envConfig.NODE_ENV === "production" ? "info" : "debug",
+      level: envConfig.NODE_ENV === 'production' ? 'info' : 'debug',
     },
   });
 
   await fastify.register(cors, {
     origin: envConfig.CORS_ORIGIN,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   });
 
   // Register cookie support
@@ -26,8 +28,8 @@ async function buildServer() {
     secret: envConfig.JWT_SECRET,
     parseOptions: {
       httpOnly: true,
-      secure: envConfig.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: envConfig.NODE_ENV === 'production',
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   });
@@ -36,18 +38,19 @@ async function buildServer() {
   await fastify.register(websocket);
 
   // Register routes
-  await fastify.register(healthRoutes, { prefix: "/api" });
-  await fastify.register(authRoutes, { prefix: "/api/auth" });
+  await fastify.register(healthRoutes, { prefix: '/api' });
+  await fastify.register(authRoutes, { prefix: '/api/auth' });
+  await fastify.register(conversationRoutes, { prefix: '/api/conversations' });
 
   // Global error handler
-  fastify.setErrorHandler((error, request, reply) => {
+  fastify.setErrorHandler((error, _request, reply) => {
     fastify.log.error(error);
 
-    const isDevelopment = envConfig.NODE_ENV === "development";
+    const isDevelopment = envConfig.NODE_ENV === 'development';
 
     reply.status(500).send({
       success: false,
-      error: isDevelopment ? error.message : "Internal Server Error",
+      error: isDevelopment ? error.message : 'Internal Server Error',
       ...(isDevelopment && { stack: error.stack }),
     });
   });
@@ -68,7 +71,7 @@ async function start() {
     console.log(`📊 Health check: http://${host}:${port}/api/health`);
     console.log(`🔌 WebSocket: ws://${host}:${port}/ws`);
   } catch (err) {
-    console.error("Error starting server:", err);
+    console.error('Error starting server:', err);
     process.exit(1);
   }
 }
