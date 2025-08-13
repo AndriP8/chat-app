@@ -41,6 +41,7 @@ async function buildServer() {
   await fastify.register(healthRoutes, { prefix: '/api' });
   await fastify.register(authRoutes, { prefix: '/api/auth' });
   await fastify.register(conversationRoutes, { prefix: '/api/conversations' });
+  await fastify.register(websocketRoutes);
 
   // Global error handler
   fastify.setErrorHandler((error, _request, reply) => {
