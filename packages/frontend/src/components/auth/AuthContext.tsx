@@ -5,16 +5,12 @@ import {
   useCallback,
   useEffect,
   type ReactNode,
-} from "react";
-import {
-  authReducer,
-  loadPersistedAuthState,
-  type AuthState,
-} from "@/reducers/authReducer";
-import type { User } from "@/types";
-import type { LoginInput, RegisterInput } from "@/schemas/auth";
-import { getErrorMessage, secureStorage } from "@/utils/helpers";
-import { authApi, ApiError } from "@/services/api";
+} from 'react';
+import { authReducer, loadPersistedAuthState, type AuthState } from '@/reducers/authReducer';
+import type { User } from '@/types';
+import type { LoginInput, RegisterInput } from '@/schemas/auth';
+import { getErrorMessage, secureStorage } from '@/utils/helpers';
+import { authApi, ApiError } from '@/services/api';
 
 interface AuthContextType {
   // State
@@ -36,26 +32,23 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [authState, dispatch] = useReducer(
-    authReducer,
-    loadPersistedAuthState(),
-  );
+  const [authState, dispatch] = useReducer(authReducer, loadPersistedAuthState());
 
   // Login function
   const login = useCallback(async (loginData: LoginInput): Promise<void> => {
-    dispatch({ type: "AUTH_LOGIN_START" });
+    dispatch({ type: 'AUTH_LOGIN_START' });
 
     try {
       const response = await authApi.login(loginData);
 
       dispatch({
-        type: "AUTH_LOGIN_SUCCESS",
-        payload: { user: response.user },
+        type: 'AUTH_LOGIN_SUCCESS',
+        payload: { user: response.data.user },
       });
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       dispatch({
-        type: "AUTH_LOGIN_FAILURE",
+        type: 'AUTH_LOGIN_FAILURE',
         payload: { error: errorMessage },
       });
       throw error; // Re-throw to allow component-level error handling
@@ -63,42 +56,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Register function
-  const register = useCallback(
-    async (userData: RegisterInput): Promise<void> => {
-      dispatch({ type: "AUTH_REGISTER_START" });
+  const register = useCallback(async (userData: RegisterInput): Promise<void> => {
+    dispatch({ type: 'AUTH_REGISTER_START' });
 
-      try {
-        const response = await authApi.register(userData);
+    try {
+      const response = await authApi.register(userData);
 
-        dispatch({
-          type: "AUTH_REGISTER_SUCCESS",
-          payload: { user: response.user },
-        });
-      } catch (error) {
-        const errorMessage = getErrorMessage(error);
-        dispatch({
-          type: "AUTH_REGISTER_FAILURE",
-          payload: { error: errorMessage },
-        });
-        throw error;
-      }
-    },
-    [],
-  );
+      dispatch({
+        type: 'AUTH_REGISTER_SUCCESS',
+        payload: { user: response.data.user },
+      });
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      dispatch({
+        type: 'AUTH_REGISTER_FAILURE',
+        payload: { error: errorMessage },
+      });
+      throw error;
+    }
+  }, []);
 
   // Logout function
   const logout = useCallback(async (): Promise<void> => {
     try {
       await authApi.logout();
     } finally {
-      secureStorage.remove("minimalUserData");
-      dispatch({ type: "AUTH_LOGOUT" });
+      secureStorage.remove('minimalUserData');
+      dispatch({ type: 'AUTH_LOGOUT' });
     }
   }, []);
 
   // Clear error function
   const clearError = useCallback((): void => {
-    dispatch({ type: "AUTH_CLEAR_ERROR" });
+    dispatch({ type: 'AUTH_CLEAR_ERROR' });
   }, []);
 
   // Authentication validation effect
@@ -109,10 +99,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await authApi.getCurrentUser();
         } catch (error) {
           if (error instanceof ApiError && error.status === 401) {
-            secureStorage.remove("minimalUserData");
-            dispatch({ type: "AUTH_LOGOUT" });
+            secureStorage.remove('minimalUserData');
+            dispatch({ type: 'AUTH_LOGOUT' });
           } else {
-            console.warn("Auth validation failed:", error);
+            console.warn('Auth validation failed:', error);
           }
         }
       };
@@ -138,16 +128,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     currentUser,
   };
 
-  return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
 
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
 
   return context;

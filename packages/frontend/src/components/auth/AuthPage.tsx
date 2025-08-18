@@ -125,7 +125,3 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     </div>
   );
 };
-
-export const LoginPage: React.FC = () => <AuthPage initialMode="login" />;
-
-export const RegisterPage: React.FC = () => <AuthPage initialMode="register" />;
