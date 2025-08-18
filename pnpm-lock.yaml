@@ -47,9 +47,6 @@ importers:
       pg:
         specifier: ^8.12.0
         version: 8.16.3
-      ws:
-        specifier: ^8.18.0
-        version: 8.18.3
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -67,7 +64,7 @@ importers:
         specifier: ^8.11.8
         version: 8.15.5
       '@types/ws':
-        specifier: ^8.5.12
+        specifier: ^8.18.1
         version: 8.18.1
       drizzle-kit:
         specifier: ^0.24.2

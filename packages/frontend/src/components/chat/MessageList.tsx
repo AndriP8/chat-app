@@ -1,27 +1,22 @@
-import { useEffect, useRef } from "react";
-import type { UIMessage } from "@/types/chat";
-import { MessageBubble } from "./MessageBubble";
+import { useEffect, useRef } from 'react';
+import type { UIMessage } from '@/types/chat';
+import { MessageBubble } from './MessageBubble';
+import { useAuth } from '../auth/AuthContext';
 
 interface MessageListProps {
   messages: UIMessage[];
-  currentUserId: string;
   isLoading?: boolean;
-  onRetryMessage?: (messageId: string) => void;
 }
 
-export const MessageList = ({
-  messages,
-  currentUserId,
-  isLoading = false,
-  onRetryMessage,
-}: MessageListProps) => {
+export const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
+  const { currentUser } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   });
 
@@ -41,30 +36,20 @@ export const MessageList = ({
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center text-gray-500">
           <p className="text-lg mb-2">No messages yet</p>
-          <p className="text-sm">
-            Start the conversation by sending a message!
-          </p>
+          <p className="text-sm">Start the conversation by sending a message!</p>
         </div>
       </div>
     );
   }
-
   return (
     <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
       {messages.map((message, index) => {
-        const isOwn = message.senderId === currentUserId;
+        const isOwn = message.sender_id === currentUser?.id;
         const prevMessage = index > 0 ? messages[index - 1] : null;
-        const showAvatar =
-          !prevMessage || prevMessage.senderId !== message.senderId;
+        const showAvatar = !prevMessage || prevMessage.sender_id !== message.sender_id;
 
         return (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            isOwn={isOwn}
-            showAvatar={showAvatar}
-            onRetryMessage={onRetryMessage}
-          />
+          <MessageBubble key={message.id} message={message} isOwn={isOwn} showAvatar={showAvatar} />
         );
       })}
 

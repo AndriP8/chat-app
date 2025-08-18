@@ -1,27 +1,36 @@
-import { useState, useCallback } from "react";
-import { MessageCircle } from "lucide-react";
-import { ChatSidebar } from "./ChatSidebar";
-import { ChatHeader } from "./ChatHeader";
-import { MessageList } from "./MessageList";
-import { MessageInput } from "./MessageInput";
-import { useConversations } from "@/hooks/useConversations";
-import type { ChatRoom } from "@/types/chat";
+import { useState, useCallback } from 'react';
+import { MessageCircle } from 'lucide-react';
+import { ChatSidebar } from './ChatSidebar';
+import { ChatHeader } from './ChatHeader';
+import { MessageList } from './MessageList';
+import { MessageInput } from './MessageInput';
+import { useWebSocketConversations } from '@/hooks/useWebSocketConversations';
+import type { ChatRoom } from '@/types/chat';
 
 export default function ChatPage() {
   const [currentRoom, setCurrentRoom] = useState<ChatRoom | null>(null);
-  const { conversations, messages, isLoading, errors } = useConversations();
+  const { conversations, messages, loading, errors, loadMessages, sendMessage } =
+    useWebSocketConversations();
 
-  const handleRoomSelect = useCallback(async (room: ChatRoom) => {
-    setCurrentRoom(room);
-  }, []);
+  const handleRoomSelect = useCallback(
+    async (room: ChatRoom) => {
+      setCurrentRoom(room);
 
-  const handleSendMessage = useCallback(async () => {
-    if (!currentRoom) return;
-  }, [currentRoom]);
+      if (!messages[room.id]) {
+        await loadMessages(room.id);
+      }
+    },
+    [loadMessages, messages]
+  );
 
-  const handleRetryMessage = useCallback(async () => {
-    if (!currentRoom) return;
-  }, [currentRoom]);
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      if (!currentRoom) return;
+
+      await sendMessage(currentRoom.id, content);
+    },
+    [currentRoom, sendMessage]
+  );
 
   const currentMessages = currentRoom ? messages[currentRoom.id] || [] : [];
 
@@ -32,6 +41,7 @@ export default function ChatPage() {
         rooms={conversations}
         currentRoom={currentRoom}
         onRoomSelect={handleRoomSelect}
+        isLoading={loading.conversations}
       />
 
       {/* Main Chat Area */}
@@ -47,20 +57,10 @@ export default function ChatPage() {
           <>
             {/* Chat Header */}
             <ChatHeader room={currentRoom} />
-
             {/* Messages */}
-            <MessageList
-              messages={currentMessages}
-              currentUserId="current-user"
-              isLoading={isLoading}
-              onRetryMessage={handleRetryMessage}
-            />
-
+            <MessageList messages={currentMessages} isLoading={loading.messages[currentRoom.id]} />
             {/* Message Input */}
-            <MessageInput
-              onSendMessage={handleSendMessage}
-              disabled={isLoading}
-            />
+            <MessageInput onSendMessage={handleSendMessage} />
           </>
         ) : (
           /* Empty State */

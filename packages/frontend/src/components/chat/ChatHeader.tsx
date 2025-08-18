@@ -1,12 +1,17 @@
 import type { ChatRoom } from "@/types/chat";
+import { useAuth } from "../auth/AuthContext";
 
 interface ChatHeaderProps {
   room: ChatRoom;
 }
 
 export const ChatHeader = ({ room }: ChatHeaderProps) => {
-  const displayName = room.participants[0]?.name || "Unknown";
-  const avatar = room.participants[0]?.profile_picture_url;
+  const { currentUser } = useAuth();
+  const recipientParticipant = room.participants.find(
+    (participant) => participant.id !== currentUser?.id
+  );
+  const displayName = recipientParticipant?.name || "Unknown";
+  const avatar = recipientParticipant?.profile_picture_url;
 
   return (
     <div className="p-4 bg-white border-b border-gray-200 flex items-center justify-between">
