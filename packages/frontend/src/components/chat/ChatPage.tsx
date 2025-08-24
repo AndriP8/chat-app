@@ -58,7 +58,11 @@ export default function ChatPage() {
             {/* Chat Header */}
             <ChatHeader room={currentRoom} />
             {/* Messages */}
-            <MessageList messages={currentMessages} isLoading={loading.messages[currentRoom.id]} />
+            <MessageList
+              messages={currentMessages}
+              isLoading={loading.messages[currentRoom.id]}
+              conversationId={currentRoom.id}
+            />
             {/* Message Input */}
             <MessageInput onSendMessage={handleSendMessage} />
           </>

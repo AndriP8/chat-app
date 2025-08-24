@@ -22,9 +22,15 @@ interface AuthenticatedUser {
 interface SendMessageData {
   conversationId: string;
   content: string;
+  tempId?: string;
 }
 
 interface ConversationData {
+  conversationId: string;
+}
+
+interface MessageStatusData {
+  messageId: string;
   conversationId: string;
 }
 
@@ -36,6 +42,10 @@ type WebSocketMessage =
   | {
       type: 'join_conversation' | 'leave_conversation';
       data: ConversationData;
+    }
+  | {
+      type: 'message_delivered' | 'message_read';
+      data: MessageStatusData;
     };
 
 interface WebSocketConnection {
@@ -166,7 +176,7 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           return;
         }
 
-        const { conversationId, content } = data;
+        const { conversationId, content, tempId } = data;
 
         // Check if user is participant in conversation
         const isParticipant = await isUserInConversation(user.id, conversationId);
@@ -221,6 +231,7 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
             name: user.name,
             profile_picture_url: user.profile_picture_url ?? null,
           },
+          tempId,
         };
 
         // Broadcast message to all participants in the conversation
@@ -281,6 +292,116 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
         return;
       }
       connectionManager.removeUserFromConversation(user.id, data.conversationId);
+      break;
+    }
+
+    case 'message_delivered': {
+      const data = message.data;
+      if (
+        !data.messageId ||
+        !data.conversationId ||
+        typeof data.messageId !== 'string' ||
+        typeof data.conversationId !== 'string'
+      ) {
+        socket.send(
+          JSON.stringify({
+            type: 'error',
+            data: { message: 'Invalid message ID or conversation ID' },
+          })
+        );
+        return;
+      }
+
+      try {
+        const isParticipant = await isUserInConversation(user.id, data.conversationId);
+        if (!isParticipant) {
+          socket.send(
+            JSON.stringify({
+              type: 'error',
+              data: { message: 'Not authorized to update message status' },
+            })
+          );
+          return;
+        }
+
+        // Update message status to delivered
+        await db
+          .update(messages)
+          .set({ status: 'delivered', updated_at: new Date() })
+          .where(eq(messages.id, data.messageId));
+
+        connectionManager.broadcastToConversation(data.conversationId, {
+          type: 'message_status_updated',
+          data: {
+            messageId: data.messageId,
+            status: 'delivered',
+            updatedBy: user.id,
+          },
+        });
+      } catch (error) {
+        console.error('Message delivered error:', error);
+        socket.send(
+          JSON.stringify({
+            type: 'error',
+            data: { message: 'Failed to update message status' },
+          })
+        );
+      }
+      break;
+    }
+
+    case 'message_read': {
+      const data = message.data;
+      if (
+        !data.messageId ||
+        !data.conversationId ||
+        typeof data.messageId !== 'string' ||
+        typeof data.conversationId !== 'string'
+      ) {
+        socket.send(
+          JSON.stringify({
+            type: 'error',
+            data: { message: 'Invalid message ID or conversation ID' },
+          })
+        );
+        return;
+      }
+
+      try {
+        const isParticipant = await isUserInConversation(user.id, data.conversationId);
+        if (!isParticipant) {
+          socket.send(
+            JSON.stringify({
+              type: 'error',
+              data: { message: 'Not authorized to update message status' },
+            })
+          );
+          return;
+        }
+
+        // Update message status to read
+        await db
+          .update(messages)
+          .set({ status: 'read', updated_at: new Date() })
+          .where(eq(messages.id, data.messageId));
+
+        connectionManager.broadcastToConversation(data.conversationId, {
+          type: 'message_status_updated',
+          data: {
+            messageId: data.messageId,
+            status: 'read',
+            updatedBy: user.id,
+          },
+        });
+      } catch (error) {
+        console.error('Message read error:', error);
+        socket.send(
+          JSON.stringify({
+            type: 'error',
+            data: { message: 'Failed to update message status' },
+          })
+        );
+      }
       break;
     }
 

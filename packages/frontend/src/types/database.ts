@@ -24,4 +24,5 @@ export interface Message {
   updated_at: Date;
   sender_id: string;
   conversation_id: string;
+  tempId?: string;
 }

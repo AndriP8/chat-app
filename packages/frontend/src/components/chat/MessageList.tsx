@@ -2,13 +2,15 @@ import { useEffect, useRef } from 'react';
 import type { UIMessage } from '@/types/chat';
 import { MessageBubble } from './MessageBubble';
 import { useAuth } from '../auth/AuthContext';
+import { webSocketService } from '@/services/websocket';
 
 interface MessageListProps {
   messages: UIMessage[];
   isLoading?: boolean;
+  conversationId?: string;
 }
 
-export const MessageList = ({ messages, isLoading = false }: MessageListProps) => {
+export const MessageList = ({ messages, isLoading = false, conversationId }: MessageListProps) => {
   const { currentUser } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -19,6 +21,21 @@ export const MessageList = ({ messages, isLoading = false }: MessageListProps) =
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   });
+
+  // Mark messages as read when they are displayed
+  useEffect(() => {
+    if (!conversationId || !currentUser || messages.length === 0) return;
+
+    // Only mark messages from other users as read
+    const unreadMessages = messages.filter(
+      (message) => message.sender_id !== currentUser.id && message.status !== 'read'
+    );
+
+    // Mark each unread message as read
+    for (const message of unreadMessages) {
+      webSocketService.markMessageRead(message.id, conversationId);
+    }
+  }, [messages, currentUser, conversationId]);
 
   if (isLoading) {
     return (

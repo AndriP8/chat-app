@@ -8,9 +8,12 @@ export interface Message extends DatabaseMessage {
 export interface UIMessage extends Message {
   // UI-specific fields for optimistic updates
   isTemporary?: boolean;
-  sendingStatus?: 'sending' | 'sent' | 'failed';
   error?: string;
   retryCount?: number;
+  sentAt?: Date;
+  deliveredAt?: Date;
+  readAt?: Date;
+  lastRetryAt?: Date;
 }
 
 export interface ChatRoom {

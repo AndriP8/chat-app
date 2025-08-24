@@ -2,8 +2,18 @@ import type { Message } from '@/types/chat';
 
 // WebSocket message types based on backend implementation
 interface WebSocketMessage {
-  type: 'send_message' | 'join_conversation' | 'leave_conversation';
-  data: SendMessageData | ConversationData | Record<string, unknown>;
+  type:
+    | 'send_message'
+    | 'join_conversation'
+    | 'leave_conversation'
+    | 'message_delivered'
+    | 'message_read';
+  data: SendMessageData | ConversationData | MessageStatusData | Record<string, unknown>;
+}
+
+interface MessageStatusData {
+  messageId: string;
+  conversationId: string;
 }
 
 interface SendMessageData {
@@ -18,8 +28,19 @@ interface ConversationData {
 
 // WebSocket response types
 interface WebSocketResponse {
-  type: 'message' | 'error' | 'connected' | 'joined_conversation';
-  data: MessageResponseData | ErrorResponseData | ConnectedResponseData | JoinedConversationData;
+  type: 'message' | 'error' | 'connected' | 'joined_conversation' | 'message_status_updated';
+  data:
+    | MessageResponseData
+    | ErrorResponseData
+    | ConnectedResponseData
+    | JoinedConversationData
+    | MessageStatusUpdatedData;
+}
+
+interface MessageStatusUpdatedData {
+  messageId: string;
+  status: 'sent' | 'delivered' | 'read' | 'failed';
+  updatedBy: string;
 }
 
 interface MessageResponseData {
@@ -47,13 +68,11 @@ export interface WebSocketEventHandlers {
   onMessage?: (message: Message) => void;
   onError?: (error: string) => void;
   onStateChange?: (state: WebSocketState) => void;
+  onMessageStatusUpdate?: (messageId: string, status: Message['status'], updatedBy: string) => void;
 }
 
 export class WebSocketService {
   private ws: WebSocket | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000;
   private state: WebSocketState = 'disconnected';
   private eventHandlers: WebSocketEventHandlers = {};
   private joinedConversations = new Set<string>();
@@ -95,7 +114,6 @@ export class WebSocketService {
 
         this.ws.onopen = () => {
           this.setState('connected');
-          this.reconnectAttempts = 0;
           resolve();
         };
 
@@ -108,19 +126,8 @@ export class WebSocketService {
           }
         };
 
-        this.ws.onclose = (event) => {
+        this.ws.onclose = () => {
           this.setState('disconnected');
-
-          // Attempt to reconnect if not a clean close
-          if (!event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts) {
-            setTimeout(
-              () => {
-                this.reconnectAttempts++;
-                this.connect().catch(console.error);
-              },
-              this.reconnectDelay * 2 ** this.reconnectAttempts
-            );
-          }
         };
 
         this.ws.onerror = (error) => {
@@ -148,7 +155,9 @@ export class WebSocketService {
         break;
       }
       case 'connected': {
-        this.rejoinConversations();
+        for (const conversationId of this.joinedConversations) {
+          this.joinConversation(conversationId);
+        }
         break;
       }
       case 'joined_conversation': {
@@ -156,15 +165,13 @@ export class WebSocketService {
         this.joinedConversations.add(data.conversationId);
         break;
       }
+      case 'message_status_updated': {
+        const data = response.data as MessageStatusUpdatedData;
+        this.eventHandlers.onMessageStatusUpdate?.(data.messageId, data.status, data.updatedBy);
+        break;
+      }
       default:
         console.warn('Unknown WebSocket message type:', response.type);
-    }
-  }
-
-  private rejoinConversations(): void {
-    // Rejoin all previously joined conversations after reconnection
-    for (const conversationId of this.joinedConversations) {
-      this.joinConversation(conversationId);
     }
   }
 
@@ -195,8 +202,6 @@ export class WebSocketService {
 
   public joinConversation(conversationId: string): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      // Store for later when connected
-      this.joinedConversations.add(conversationId);
       return;
     }
 
@@ -208,9 +213,9 @@ export class WebSocketService {
     };
 
     this.ws.send(JSON.stringify(message));
-    this.joinedConversations.add(conversationId);
   }
 
+  // Not used
   public leaveConversation(conversationId: string): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return;
@@ -225,6 +230,38 @@ export class WebSocketService {
 
     this.ws.send(JSON.stringify(message));
     this.joinedConversations.delete(conversationId);
+  }
+
+  public markMessageDelivered(messageId: string, conversationId: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    const message: WebSocketMessage = {
+      type: 'message_delivered',
+      data: {
+        messageId,
+        conversationId,
+      },
+    };
+
+    this.ws.send(JSON.stringify(message));
+  }
+
+  public markMessageRead(messageId: string, conversationId: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    const message: WebSocketMessage = {
+      type: 'message_read',
+      data: {
+        messageId,
+        conversationId,
+      },
+    };
+
+    this.ws.send(JSON.stringify(message));
   }
 
   public disconnect(): void {

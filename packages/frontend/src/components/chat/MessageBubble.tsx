@@ -1,4 +1,5 @@
 import type { UIMessage } from '@/types/chat';
+import { Check, CheckCheck, AlertCircle, Clock, RotateCcw } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: UIMessage;
@@ -12,6 +13,37 @@ function formatMessageTime(date: Date | string): string {
 }
 
 export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubbleProps) => {
+  const renderStatusIcon = () => {
+    if (!isOwn) return null;
+
+    // Show sending status for temporary messages
+    if (message.isTemporary) {
+      return (
+        <div className="flex items-center gap-1">
+          <Clock size={12} className="text-gray-400 animate-pulse" />
+        </div>
+      );
+    }
+    switch (message.status) {
+      case 'sent':
+        return <Check size={12} className="text-gray-500" />;
+      case 'delivered':
+        return <CheckCheck size={12} className="text-gray-500" />;
+      case 'read':
+        return <CheckCheck size={12} className="text-blue-600" />;
+      case 'failed':
+        return (
+          <div className="flex items-center gap-1" title="Message failed to send">
+            <AlertCircle size={12} className="text-red-500" />
+            {message.retryCount && message.retryCount > 0 && (
+              <RotateCcw size={10} className="text-red-400" />
+            )}
+          </div>
+        );
+      default:
+        return <Check size={12} className="text-gray-400" />;
+    }
+  };
   return (
     <div className={`flex gap-3 mb-4 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar or placeholder for alignment */}
@@ -46,7 +78,7 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
             isOwn
               ? 'bg-blue-500 text-white rounded-br-md'
               : 'bg-gray-100 text-gray-900 rounded-bl-md'
-          }`}
+          } ${message.status === 'failed' ? 'border border-red-200' : ''}`}
         >
           <p className="text-sm leading-relaxed">{message.content}</p>
         </div>
@@ -56,6 +88,7 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
           className={`flex items-center gap-1 mt-1 px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
         >
           <span className="text-xs text-gray-500">{formatMessageTime(message.created_at)}</span>
+          {renderStatusIcon()}
         </div>
       </div>
     </div>
