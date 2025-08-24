@@ -1,14 +1,9 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import { AuthProvider } from "@/components/auth/AuthContext";
-import { AuthPage } from "@/components/auth/AuthPage";
-import ChatPage from "./components/chat/ChatPage";
-import { AuthGuard } from "./components/auth/AuthGuard";
-import { Navigation } from "./components/navigation/Navigation";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from '@/components/auth/AuthContext';
+import { AuthPage } from '@/components/auth/AuthPage';
+import ChatPage from './components/chat/ChatPage';
+import { AuthGuard } from './components/auth/AuthGuard';
+import { Navigation } from './components/navigation/Navigation';
 
 function App() {
   return (
@@ -21,10 +16,7 @@ function App() {
 
             {/* Auth Routes */}
             <Route path="/login" element={<AuthPage initialMode="login" />} />
-            <Route
-              path="/register"
-              element={<AuthPage initialMode="register" />}
-            />
+            <Route path="/register" element={<AuthPage initialMode="register" />} />
             <Route path="/auth" element={<AuthPage />} />
 
             {/* Protected Routes */}
