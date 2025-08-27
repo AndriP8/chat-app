@@ -19,7 +19,7 @@ export interface Conversation {
 export interface Message {
   id: string;
   content: string;
-  status: 'sent' | 'delivered' | 'read' | 'failed';
+  status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   created_at: Date;
   updated_at: Date;
   sender_id: string;

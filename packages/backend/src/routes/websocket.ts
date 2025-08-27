@@ -36,17 +36,17 @@ interface MessageStatusData {
 
 type WebSocketMessage =
   | {
-      type: 'send_message';
-      data: SendMessageData;
-    }
+    type: 'send_message';
+    data: SendMessageData;
+  }
   | {
-      type: 'join_conversation' | 'leave_conversation';
-      data: ConversationData;
-    }
+    type: 'join_conversation' | 'leave_conversation';
+    data: ConversationData;
+  }
   | {
-      type: 'message_delivered' | 'message_read';
-      data: MessageStatusData;
-    };
+    type: 'message_delivered' | 'message_read';
+    data: MessageStatusData;
+  };
 
 interface WebSocketConnection {
   socket: WebSocket;
@@ -99,8 +99,7 @@ class ConnectionManager {
     for (const [_userId, connections] of this.userConnections) {
       for (const connection of connections) {
         if (
-          connection.conversationIds.has(conversationId) &&
-          connection.socket.readyState === WebSocket.OPEN
+          connection.conversationIds.has(conversationId)
         ) {
           connection.socket.send(JSON.stringify(message));
         }
@@ -379,20 +378,27 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           return;
         }
 
-        // Update message status to read
-        await db
-          .update(messages)
-          .set({ status: 'read', updated_at: new Date() })
-          .where(eq(messages.id, data.messageId));
+        const [currentMessage] = await db
+          .select({ status: messages.status })
+          .from(messages)
+          .where(eq(messages.id, data.messageId))
+          .limit(1);
 
-        connectionManager.broadcastToConversation(data.conversationId, {
-          type: 'message_status_updated',
-          data: {
-            messageId: data.messageId,
-            status: 'read',
-            updatedBy: user.id,
-          },
-        });
+        if (currentMessage?.status !== 'read') {
+          await db
+            .update(messages)
+            .set({ status: 'read', updated_at: new Date() })
+            .where(eq(messages.id, data.messageId));
+
+          connectionManager.broadcastToConversation(data.conversationId, {
+            type: 'message_status_updated',
+            data: {
+              messageId: data.messageId,
+              status: 'read',
+              updatedBy: user.id,
+            },
+          });
+        }
       } catch (error) {
         console.error('Message read error:', error);
         socket.send(

@@ -69,7 +69,7 @@ export const messages = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     content: text('content').notNull(),
-    status: varchar('status', { length: 20 }).default('sent').notNull(), // 'sent', 'delivered', 'read', 'failed'
+    status: varchar('status', { length: 20 }).default('sending').notNull(), // 'sending', 'sent', 'delivered', 'read', 'failed'
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull(),
     sender_id: uuid('sender_id')

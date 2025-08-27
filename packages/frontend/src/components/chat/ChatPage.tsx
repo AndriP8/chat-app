@@ -10,7 +10,7 @@ import type { ChatRoom } from '@/types/chat';
 
 export default function ChatPage() {
   const [currentRoom, setCurrentRoom] = useState<ChatRoom | null>(null);
-  const { conversations, messages, loading, errors, loadMessages, sendMessage } =
+  const { conversations, messages, loading, error, loadMessages, sendMessage } =
     useWebSocketConversations();
 
   const handleRoomSelect = useCallback(
@@ -49,9 +49,9 @@ export default function ChatPage() {
         {/* Offline Indicator */}
         <OfflineIndicator />
         {/* Message Error Display */}
-        {Object.keys(errors.messages || {}).length > 0 && currentRoom?.id && (
+        {Object.keys(error.messages || {}).length > 0 && currentRoom?.id && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 mx-4 mt-4 rounded">
-            <p className="text-sm">{errors.messages?.[currentRoom.id]}</p>
+            <p className="text-sm">{error.messages?.[currentRoom.id]}</p>
           </div>
         )}
 

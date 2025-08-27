@@ -3,11 +3,11 @@ import type { Message } from '@/types/chat';
 // WebSocket message types based on backend implementation
 interface WebSocketMessage {
   type:
-    | 'send_message'
-    | 'join_conversation'
-    | 'leave_conversation'
-    | 'message_delivered'
-    | 'message_read';
+  | 'send_message'
+  | 'join_conversation'
+  | 'leave_conversation'
+  | 'message_delivered'
+  | 'message_read';
   data: SendMessageData | ConversationData | MessageStatusData | Record<string, unknown>;
 }
 
@@ -30,11 +30,11 @@ interface ConversationData {
 interface WebSocketResponse {
   type: 'message' | 'error' | 'connected' | 'joined_conversation' | 'message_status_updated';
   data:
-    | MessageResponseData
-    | ErrorResponseData
-    | ConnectedResponseData
-    | JoinedConversationData
-    | MessageStatusUpdatedData;
+  | MessageResponseData
+  | ErrorResponseData
+  | ConnectedResponseData
+  | JoinedConversationData
+  | MessageStatusUpdatedData;
 }
 
 interface MessageStatusUpdatedData {

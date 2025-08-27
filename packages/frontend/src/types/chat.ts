@@ -7,6 +7,7 @@ export interface Message extends DatabaseMessage {
 // Extended message type for UI state management
 export interface UIMessage extends Message {
   // UI-specific fields for optimistic updates
+  tempId?: string;
   isTemporary?: boolean;
   error?: string;
   retryCount?: number;
@@ -74,8 +75,6 @@ export interface ConversationsState {
   loading: {
     conversations: boolean;
     messages: Record<string, boolean>;
-    send: boolean;
-    create: boolean;
   };
   errors: {
     conversations?: string;
@@ -90,32 +89,32 @@ export type ConversationsAction =
   | { type: 'SET_MESSAGES'; payload: { conversationId: string; messages: UIMessage[] } }
   | { type: 'ADD_MESSAGE'; payload: { conversationId: string; message: UIMessage } }
   | {
-      type: 'UPDATE_MESSAGE';
-      payload: { conversationId: string; messageId: string; updates: Partial<UIMessage> };
-    }
+    type: 'UPDATE_MESSAGE';
+    payload: { conversationId: string; messageId: string; updates: Partial<UIMessage> };
+  }
   | { type: 'REMOVE_MESSAGE'; payload: { conversationId: string; messageId: string } }
   | {
-      type: 'SET_LOADING';
-      payload: {
-        type: keyof ConversationsState['loading'];
-        loading: boolean;
-        conversationId?: string;
-      };
-    }
+    type: 'SET_LOADING';
+    payload: {
+      type: keyof ConversationsState['loading'];
+      loading: boolean;
+      conversationId?: string;
+    };
+  }
   | {
-      type: 'SET_ERROR';
-      payload: {
-        type: keyof ConversationsState['errors'];
-        error: string | undefined;
-        conversationId?: string;
-      };
-    }
+    type: 'SET_ERROR';
+    payload: {
+      type: keyof ConversationsState['errors'];
+      error: string | undefined;
+      conversationId?: string;
+    };
+  }
   | {
-      type: 'CLEAR_ERROR';
-      payload: { type: keyof ConversationsState['errors']; conversationId?: string };
-    }
+    type: 'CLEAR_ERROR';
+    payload: { type: keyof ConversationsState['errors']; conversationId?: string };
+  }
   | { type: 'CLEAR_ALL_ERRORS' }
   | {
-      type: 'UPDATE_CONVERSATION';
-      payload: { conversationId: string; updates: Partial<ChatRoom> };
-    };
+    type: 'UPDATE_CONVERSATION';
+    payload: { conversationId: string; updates: Partial<ChatRoom> };
+  };

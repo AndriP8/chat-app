@@ -1,37 +1,31 @@
-import { useReducer, useEffect, useCallback, useRef } from 'react';
+import { useReducer, useEffect, useCallback, useRef, useState } from 'react';
 import { conversationApi } from '@/services/api';
 import { webSocketService } from '@/services/websocket';
 import { useAuth } from '@/components/auth/AuthContext';
-import type { ChatRoom, Message, UIMessage } from '@/types/chat';
 import { conversationsReducer, initialConversationsState } from '@/reducers/conversationsReducer';
-
-export interface UseConversationsErrors {
-  conversations?: string;
-  messages?: Record<string, string>; // per conversation ID
-  send?: string;
-  create?: string;
-}
-
+import type { ChatRoom, UIMessage, Message } from '@/types/chat';
 export interface UseConversationsReturn {
   conversations: ChatRoom[];
   messages: Record<string, UIMessage[]>;
-  // Granular loading states
   loading: {
     conversations: boolean;
     messages: Record<string, boolean>;
-    send: boolean;
-    create: boolean;
   };
-  errors: UseConversationsErrors;
-  // Actions
+  error: {
+    conversations?: string;
+    messages?: Record<string, string>;
+    websocket?: string;
+    send?: string;
+  };
+  loadConversations: () => Promise<void>;
   loadMessages: (conversationId: string) => Promise<void>;
-  sendMessage: (conversationId: string, content: string, tempId?: string) => Promise<void>;
+  sendMessage: (conversationId: string, content: string) => Promise<void>;
 }
 
 export function useWebSocketConversations(): UseConversationsReturn {
   const [state, dispatch] = useReducer(conversationsReducer, initialConversationsState);
+  const [wsError, setWsError] = useState<string>('');
   const { currentUser } = useAuth();
-  const isConnectingRef = useRef(false);
   const currentConversationRef = useRef<string | null>(null);
 
   const { conversations, messages, loading, errors } = state;
@@ -43,67 +37,100 @@ export function useWebSocketConversations(): UseConversationsReturn {
   }, [messages]);
 
   // Handle incoming WebSocket messages
-  const handleWebSocketMessage = useCallback((message: Message) => {
-    const conversationMessages = messagesRef.current[message.conversation_id] || [];
-    const tempMessage = conversationMessages.find(
-      (msg) =>
-        msg.isTemporary &&
-        msg.sender_id === message.sender_id &&
-        msg.content === message.content &&
-        // Check if the message was sent within the last 30 seconds
-        new Date().getTime() - new Date(msg.created_at).getTime() < 30000
-    );
+  const handleWebSocketMessage = useCallback(
+    (message: Message) => {
+      setTimeout(() => {
+        const conversationMessages = messagesRef.current[message.conversation_id] || [];
 
-    if (tempMessage) {
-      // Replace the temporary message with the real one
-      dispatch({
-        type: 'UPDATE_MESSAGE',
-        payload: {
-          conversationId: message.conversation_id,
-          messageId: tempMessage.id,
-          updates: {
-            ...message,
-            sendingStatus: 'sent',
-            isTemporary: false,
-            retryCount: 0,
+        // Check if we already have this message (by tempId or actual id)
+        const existingMessageIndex = conversationMessages.findIndex(
+          (msg) =>
+            (message.tempId && msg.tempId === message.tempId) ||
+            msg.id === message.id
+        );
+
+        if (existingMessageIndex !== -1) {
+          const existingMessage = conversationMessages[existingMessageIndex];
+
+          // Only update if necessary (temporary message becoming permanent or status change)
+          if (existingMessage.isTemporary || existingMessage.status !== message.status) {
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              payload: {
+                conversationId: message.conversation_id,
+                messageId: existingMessage.id,
+                updates: {
+                  ...message,
+                  id: message.id || existingMessage.id, // Keep existing ID if new one is missing
+                  isTemporary: false,
+                  retryCount: 0,
+                },
+              },
+            });
+          }
+        } else {
+          // This is a new message (likely from another user)
+          dispatch({
+            type: 'ADD_MESSAGE',
+            payload: {
+              conversationId: message.conversation_id,
+              message: {
+                ...message,
+                isTemporary: false,
+                retryCount: 0,
+              },
+            },
+          });
+
+          // If this is a message from another user, mark it as delivered and read
+          if (currentUser && message.sender_id !== currentUser.id) {
+            webSocketService.markMessageDelivered(message.id, message.conversation_id);
+            // Also mark as read if we're viewing this conversation
+          }
+
+          // Update conversation's last message and timestamp
+          dispatch({
+            type: 'UPDATE_CONVERSATION',
+            payload: {
+              conversationId: message.conversation_id,
+              updates: {
+                last_message: message,
+                updated_at: message.created_at.toISOString(),
+              },
+            },
+          });
+        }
+      }, 100);
+    },
+    [currentUser]
+  );
+
+  // Handle message status updates
+  const handleMessageStatusUpdate = useCallback((messageId: string, status: Message['status']) => {
+    for (const [conversationId, conversationMessages] of Object.entries(messagesRef.current)) {
+      const messageIndex = conversationMessages.findIndex((msg) => msg.id === messageId);
+      if (messageIndex !== -1) {
+        dispatch({
+          type: 'UPDATE_MESSAGE',
+          payload: {
+            conversationId,
+            messageId,
+            updates: {
+              status,
+              ...(status === "sent" && { sentAt: new Date() }),
+              ...(status === 'delivered' && { deliveredAt: new Date() }),
+              ...(status === 'read' && { readAt: new Date() }),
+            },
           },
-        },
-      });
-    } else {
-      // Add new message (from other users or if no temp message found)
-      dispatch({
-        type: 'ADD_MESSAGE',
-        payload: {
-          conversationId: message.conversation_id,
-          message: {
-            ...message,
-            sendingStatus: 'sent' as const,
-            isTemporary: false,
-            retryCount: 0,
-          },
-        },
-      });
+        });
+
+        break;
+      }
     }
-
-    // Update conversation's last message and timestamp
-    dispatch({
-      type: 'UPDATE_CONVERSATION',
-      payload: {
-        conversationId: message.conversation_id,
-        updates: {
-          last_message: message,
-          updated_at: message.created_at.toISOString(),
-        },
-      },
-    });
   }, []);
 
-  // Initialize WebSocket connection and event handlers
   useEffect(() => {
-    const initializeWebSocket = async () => {
-      if (isConnectingRef.current) return;
-      isConnectingRef.current = true;
-
+    const connectWebSocket = async () => {
       try {
         webSocketService.setEventHandlers({
           onMessage: handleWebSocketMessage,
@@ -114,27 +141,21 @@ export function useWebSocketConversations(): UseConversationsReturn {
               payload: { type: 'send', error },
             });
           },
-          onStateChange: (state) => {
-            console.log('WebSocket state changed:', state);
-          },
+          onMessageStatusUpdate: handleMessageStatusUpdate,
         });
-
-        // Connect to WebSocket
         await webSocketService.connect();
       } catch (error) {
+        setWsError(error instanceof Error ? error.message : 'Failed to initialize WebSocket');
         console.error('Failed to initialize WebSocket:', error);
-      } finally {
-        isConnectingRef.current = false;
       }
     };
 
-    initializeWebSocket();
+    connectWebSocket();
 
     return () => {
       webSocketService.disconnect();
     };
-  }, [handleWebSocketMessage]);
-
+  }, [handleWebSocketMessage, handleMessageStatusUpdate]);
   // Join conversation when current conversation changes
   const joinConversation = useCallback((conversationId: string) => {
     if (currentConversationRef.current !== conversationId) {
@@ -148,22 +169,14 @@ export function useWebSocketConversations(): UseConversationsReturn {
     }
   }, []);
 
-  // Load conversations on mount
-  const refreshConversations = useCallback(async () => {
+  const loadConversations = useCallback(async () => {
     try {
       dispatch({
         type: 'SET_LOADING',
         payload: { type: 'conversations', loading: true },
       });
-      dispatch({
-        type: 'CLEAR_ERROR',
-        payload: { type: 'conversations' },
-      });
       const data = await conversationApi.getConversations();
-      dispatch({
-        type: 'SET_CONVERSATIONS',
-        payload: data.data,
-      });
+      dispatch({ type: 'SET_CONVERSATIONS', payload: data.data });
     } catch (err) {
       console.error('Failed to load conversations:', err);
       dispatch({
@@ -223,7 +236,6 @@ export function useWebSocketConversations(): UseConversationsReturn {
     [joinConversation]
   );
 
-  // Send a message using WebSocket with fallback to HTTP
   const sendMessage = useCallback(
     async (conversationId: string, content: string) => {
       if (!content) {
@@ -238,10 +250,10 @@ export function useWebSocketConversations(): UseConversationsReturn {
       if (!currentUser) {
         throw new Error('User not authenticated');
       }
-
       // Create temporary message for optimistic UI
       const tempMessage: UIMessage = {
         id: tempId,
+        tempId,
         content,
         sender_id: currentUser.id,
         conversation_id: conversationId,
@@ -252,35 +264,25 @@ export function useWebSocketConversations(): UseConversationsReturn {
           created_at: new Date(),
           updated_at: new Date(),
         },
-        status: 'sent',
+        status: 'sending',
         created_at: new Date(),
         updated_at: new Date(),
         isTemporary: true,
-        sendingStatus: 'sending',
-        retryCount: 0,
       };
 
       try {
-        dispatch({
-          type: 'SET_LOADING',
-          payload: { type: 'send', loading: true },
-        });
-        dispatch({
-          type: 'CLEAR_ERROR',
-          payload: { type: 'send' },
-        });
-
-        // Add temporary message immediately for optimistic UI
+        // Optimistic update
         dispatch({
           type: 'ADD_MESSAGE',
           payload: { conversationId, message: tempMessage },
         });
 
-        // Try WebSocket first, fallback to HTTP if WebSocket is not available
         if (webSocketService.isConnected()) {
-          joinConversation(conversationId);
-
-          await webSocketService.sendMessage(conversationId, content, tempId);
+          // Delay sending to allow optimistic update to be seen
+          setTimeout(async () => {
+            joinConversation(conversationId);
+            await webSocketService.sendMessage(conversationId, content, tempId);
+          }, 200);
         }
       } catch (err) {
         console.error('Failed to send message:', err);
@@ -292,32 +294,26 @@ export function useWebSocketConversations(): UseConversationsReturn {
             conversationId,
             messageId: tempId,
             updates: {
-              sendingStatus: 'failed' as const,
+              status: 'failed',
               error: errorMessage,
-              retryCount: (tempMessage.retryCount || 0) + 1,
             },
           },
         });
-
         dispatch({
           type: 'SET_ERROR',
-          payload: { type: 'send', error: errorMessage },
-        });
-        throw err;
-      } finally {
-        dispatch({
-          type: 'SET_LOADING',
-          payload: { type: 'send', loading: false },
+          payload: {
+            type: 'send',
+            error: errorMessage,
+          },
         });
       }
     },
     [joinConversation, currentUser]
   );
 
-  // Load conversations on mount
   useEffect(() => {
-    refreshConversations();
-  }, [refreshConversations]);
+    loadConversations();
+  }, [loadConversations]);
 
   return {
     conversations,
@@ -325,10 +321,14 @@ export function useWebSocketConversations(): UseConversationsReturn {
     loading: {
       conversations: loading.conversations,
       messages: loading.messages,
-      send: loading.send,
-      create: loading.create,
     },
-    errors,
+    error: {
+      conversations: errors.conversations,
+      messages: errors.messages,
+      websocket: wsError,
+      send: errors.send,
+    },
+    loadConversations,
     loadMessages,
     sendMessage,
   };

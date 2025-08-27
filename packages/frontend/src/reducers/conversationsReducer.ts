@@ -7,8 +7,6 @@ export const initialConversationsState: ConversationsState = {
   loading: {
     conversations: false,
     messages: {},
-    send: false,
-    create: false,
   },
   errors: {},
 };
