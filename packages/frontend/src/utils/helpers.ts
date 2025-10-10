@@ -115,10 +115,31 @@ export const getErrorMessage = (error: unknown): string => {
 };
 
 /**
- * Format a date for message timestamps
- * @param date - The date to format
- * @returns Formatted time string (e.g., "2:30 PM", "Yesterday", "Jan 15")
+ * Safely convert any date value to a proper Date object
+ * This helps prevent "getTime is not a function" errors
  */
+export function ensureDate(date: Date | string | number | undefined | null): Date {
+  if (!date) {
+    return new Date();
+  }
+  
+  if (date instanceof Date) {
+    return date;
+  }
+  
+  try {
+    return new Date(date);
+  } catch (error) {
+    console.error('Failed to convert to Date:', error);
+    return new Date();
+  }
+}
+
+/**
+  * Format a date for message timestamps
+  * @param date - The date to format
+  * @returns Formatted time string (e.g., "2:30 PM", "Yesterday", "Jan 15")
+  */
 export const formatMessageTime = (date: Date): string => {
   const now = new Date();
   const messageDate = new Date(date);
