@@ -13,7 +13,7 @@ class ChatDatabase extends Dexie {
   users!: EntityTable<User, 'id'>;
   conversations!: EntityTable<Conversation, 'id'>;
   messages!: EntityTable<Message, 'id'>;
-  conversation_participants!: EntityTable<ConversationParticipant, 'id'>;
+  conversation_participants!: EntityTable<ConversationParticipant, 'conversation_id'>;
   draft_messages!: EntityTable<DraftMessage, 'id'>;
   send_message_requests!: EntityTable<SendMessageRequest, 'id'>;
 
@@ -24,43 +24,40 @@ class ChatDatabase extends Dexie {
       users: 'id, email, name, created_at',
       conversations: 'id, created_by, created_at, updated_at',
       messages: 'id, conversation_id, sender_id, status, created_at, tempId',
-
-      conversation_participants: 'id, conversation_id, user_id, [conversation_id+user_id]',
+      conversation_participants: '[conversation_id+user_id], conversation_id, user_id',
       draft_messages: 'id, conversation_id, user_id, [conversation_id+user_id], updated_at',
-      send_message_requests:
-        'id, message_id, temp_id, status, conversation_id, created_at, last_attempt_at',
+      send_message_requests: 'id, message_id, status, created_at, last_sent_at',
     });
 
     // Add hooks for automatic timestamp updates
     this.users.hook('creating', (_primKey, obj, _trans) => {
-      obj.created_at = new Date();
-      obj.updated_at = new Date();
+      if (!obj.created_at) obj.created_at = new Date();
+      if (!obj.updated_at) obj.updated_at = new Date();
     });
 
     this.users.hook('updating', (modifications, _primKey, _obj, _trans) => {
-      (modifications as Partial<User>).updated_at = new Date();
+      const mods = modifications as Partial<User>;
+      if (!mods.updated_at) mods.updated_at = new Date();
     });
 
     this.conversations.hook('creating', (_primKey, obj, _trans) => {
-      obj.created_at = new Date();
-      obj.updated_at = new Date();
+      if (!obj.created_at) obj.created_at = new Date();
+      if (!obj.updated_at) obj.updated_at = new Date();
     });
 
     this.conversations.hook('updating', (modifications, _primKey, _obj, _trans) => {
-      (modifications as Partial<Conversation>).updated_at = new Date();
+      const mods = modifications as Partial<Conversation>;
+      if (!mods.updated_at) mods.updated_at = new Date();
     });
 
     this.messages.hook('creating', (_primKey, obj, _trans) => {
-      obj.created_at = new Date();
-      obj.updated_at = new Date();
+      if (!obj.created_at) obj.created_at = new Date();
+      if (!obj.updated_at) obj.updated_at = new Date();
     });
 
     this.messages.hook('updating', (modifications, _primKey, _obj, _trans) => {
-      (modifications as Partial<Message>).updated_at = new Date();
-    });
-
-    this.conversation_participants.hook('creating', (_primKey, obj, _trans) => {
-      obj.joined_at = new Date();
+      const mods = modifications as Partial<Message>;
+      if (!mods.updated_at) mods.updated_at = new Date();
     });
 
     this.draft_messages.hook('creating', (_primKey, obj, _trans) => {
@@ -74,11 +71,6 @@ class ChatDatabase extends Dexie {
 
     this.send_message_requests.hook('creating', (_primKey, obj, _trans) => {
       obj.created_at = new Date();
-      obj.updated_at = new Date();
-    });
-
-    this.send_message_requests.hook('updating', (modifications, _primKey, _obj, _trans) => {
-      (modifications as Partial<SendMessageRequest>).updated_at = new Date();
     });
   }
 

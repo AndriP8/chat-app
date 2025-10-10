@@ -28,10 +28,8 @@ export interface Message {
 }
 
 export interface ConversationParticipant {
-  id: string;
   conversation_id: string;
   user_id: string;
-  joined_at: Date;
 }
 
 // Client-side only entities (not synced to server)
@@ -47,15 +45,11 @@ export interface DraftMessage {
 export interface SendMessageRequest {
   id: string;
   message_id: string;
-  conversation_id: string;
-  content: string;
-  temp_id: string;
-  status: 'pending' | 'in_flight' | 'fail' | 'success';
-  fail_count: number;
-  created_at: Date;
-  updated_at: Date;
-  last_attempt_at?: Date;
+  status: 'pending' | 'in_flight' | 'failed';
+  last_sent_at?: Date;
+  retry_count: number;
   error_message?: string;
+  created_at: Date;
 }
 
 // Database schema types for Dexie
