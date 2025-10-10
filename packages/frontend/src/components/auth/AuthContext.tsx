@@ -11,6 +11,7 @@ import type { User } from '@/types';
 import type { LoginInput, RegisterInput } from '@/schemas/auth';
 import { getErrorMessage, secureStorage } from '@/utils/helpers';
 import { authApi, ApiError } from '@/services/api';
+import { initializeDataSync, shutdownDataSync, clearAllLocalData } from '@/services';
 
 interface AuthContextType {
   // State
@@ -81,6 +82,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await authApi.logout();
     } finally {
+      // Clean up data synchronization
+      try {
+        shutdownDataSync();
+        await clearAllLocalData();
+      } catch (error) {
+        console.error('Error during data sync cleanup:', error);
+      }
+
       secureStorage.remove('minimalUserData');
       dispatch({ type: 'AUTH_LOGOUT' });
     }
@@ -113,6 +122,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return () => clearInterval(interval);
     }
   }, [authState.isAuthenticated]);
+
+  // Data sync initialization effect
+  useEffect(() => {
+    if (authState.isAuthenticated && authState.user) {
+      const initializeSync = async () => {
+        try {
+          if (authState.user) {
+            await initializeDataSync({
+              maxRetries: 3,
+              baseDelayMs: 1000,
+              maxDelayMs: 30000,
+              processingIntervalMs: 5000,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to initialize data synchronization:', error);
+        }
+      };
+
+      initializeSync();
+    }
+  }, [authState.isAuthenticated, authState.user]);
 
   // Computed values
   const isAuthenticated = authState.isAuthenticated;

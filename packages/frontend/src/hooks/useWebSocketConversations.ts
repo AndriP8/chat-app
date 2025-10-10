@@ -1,9 +1,12 @@
-import { useReducer, useEffect, useCallback, useRef, useState } from 'react';
-import { conversationApi } from '@/services/api';
+import { useReducer, useEffect, useCallback, useRef } from 'react';
 import { webSocketService } from '@/services/websocket';
 import { useAuth } from '@/components/auth/AuthContext';
 import { conversationsReducer, initialConversationsState } from '@/reducers/conversationsReducer';
-import type { ChatRoom, UIMessage, Message } from '@/types/chat';
+import type { ChatRoom, UIMessage } from '@/types/chat';
+import type { Message as DatabaseMessage } from '@/types/database';
+import { dataSyncer } from '@/services/dataSyncer';
+import { dbOps } from '@/services/databaseOperations';
+import { ensureDate } from '@/utils/helpers';
 export interface UseConversationsReturn {
   conversations: ChatRoom[];
   messages: Record<string, UIMessage[]>;
@@ -14,7 +17,6 @@ export interface UseConversationsReturn {
   error: {
     conversations?: string;
     messages?: Record<string, string>;
-    websocket?: string;
     send?: string;
   };
   loadConversations: () => Promise<void>;
@@ -24,7 +26,6 @@ export interface UseConversationsReturn {
 
 export function useWebSocketConversations(): UseConversationsReturn {
   const [state, dispatch] = useReducer(conversationsReducer, initialConversationsState);
-  const [wsError, setWsError] = useState<string>('');
   const { currentUser } = useAuth();
   const currentConversationRef = useRef<string | null>(null);
 
@@ -36,126 +37,86 @@ export function useWebSocketConversations(): UseConversationsReturn {
     messagesRef.current = messages;
   }, [messages]);
 
-  // Handle incoming WebSocket messages
-  const handleWebSocketMessage = useCallback(
-    (message: Message) => {
-      setTimeout(() => {
-        const conversationMessages = messagesRef.current[message.conversation_id] || [];
+  const handleDataSyncerMessage = useCallback(
+    async (message: DatabaseMessage) => {
+      try {
+        const sender = await dbOps.getUser(message.sender_id);
+        if (!sender) return;
 
-        // Check if we already have this message (by tempId or actual id)
-        const existingMessageIndex = conversationMessages.findIndex(
-          (msg) =>
-            (message.tempId && msg.tempId === message.tempId) ||
-            msg.id === message.id
-        );
+        const uiMessage: UIMessage = {
+          ...message,
+          sender,
+          isTemporary: false,
+          retryCount: 0,
+          created_at: ensureDate(message.created_at),
+          updated_at: ensureDate(message.updated_at),
+        };
 
-        if (existingMessageIndex !== -1) {
-          const existingMessage = conversationMessages[existingMessageIndex];
-
-          // Only update if necessary (temporary message becoming permanent or status change)
-          if (existingMessage.isTemporary || existingMessage.status !== message.status) {
-            dispatch({
-              type: 'UPDATE_MESSAGE',
-              payload: {
-                conversationId: message.conversation_id,
-                messageId: existingMessage.id,
-                updates: {
-                  ...message,
-                  id: message.id || existingMessage.id, // Keep existing ID if new one is missing
-                  isTemporary: false,
-                  retryCount: 0,
-                },
-              },
-            });
-          }
+        if (message.tempId && sender.id === currentUser?.id) {
+          // Replace temporary message with server response in current conversation sender
+          dispatch({
+            type: 'REPLACE_TEMP_MESSAGE',
+            payload: {
+              conversationId: message.conversation_id,
+              tempId: message.tempId,
+              message: uiMessage,
+            },
+          });
         } else {
-          // This is a new message (likely from another user)
+          // Add new message from sender to receiver conversation
           dispatch({
             type: 'ADD_MESSAGE',
             payload: {
               conversationId: message.conversation_id,
-              message: {
-                ...message,
-                isTemporary: false,
-                retryCount: 0,
-              },
-            },
-          });
-
-          // If this is a message from another user, mark it as delivered and read
-          if (currentUser && message.sender_id !== currentUser.id) {
-            webSocketService.markMessageDelivered(message.id, message.conversation_id);
-            // Also mark as read if we're viewing this conversation
-          }
-
-          // Update conversation's last message and timestamp
-          dispatch({
-            type: 'UPDATE_CONVERSATION',
-            payload: {
-              conversationId: message.conversation_id,
-              updates: {
-                last_message: message,
-                updated_at: message.created_at.toISOString(),
-              },
+              message: uiMessage,
             },
           });
         }
-      }, 100);
+      } catch (error) {
+        console.error('Error handling dataSyncer message:', error);
+      }
     },
     [currentUser]
   );
 
-  // Handle message status updates
-  const handleMessageStatusUpdate = useCallback((messageId: string, status: Message['status']) => {
-    for (const [conversationId, conversationMessages] of Object.entries(messagesRef.current)) {
-      const messageIndex = conversationMessages.findIndex((msg) => msg.id === messageId);
-      if (messageIndex !== -1) {
-        dispatch({
-          type: 'UPDATE_MESSAGE',
-          payload: {
-            conversationId,
-            messageId,
-            updates: {
-              status,
-              ...(status === "sent" && { sentAt: new Date() }),
-              ...(status === 'delivered' && { deliveredAt: new Date() }),
-              ...(status === 'read' && { readAt: new Date() }),
-            },
-          },
-        });
-
-        break;
+  const handleDataSyncerStatusUpdate = useCallback(
+    async (messageId: string, status: DatabaseMessage['status']) => {
+      try {
+        for (const [conversationId, conversationMessages] of Object.entries(messagesRef.current)) {
+          const messageIndex = conversationMessages.findIndex((msg) => msg.id === messageId);
+          if (messageIndex !== -1) {
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              payload: {
+                conversationId,
+                messageId,
+                updates: {
+                  status,
+                  ...(status === 'sent' && { sentAt: new Date() }),
+                  ...(status === 'delivered' && { deliveredAt: new Date() }),
+                  ...(status === 'read' && { readAt: new Date() }),
+                },
+              },
+            });
+            break;
+          }
+        }
+      } catch (error) {
+        console.error('Error handling dataSyncer status update:', error);
       }
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
-    const connectWebSocket = async () => {
-      try {
-        webSocketService.setEventHandlers({
-          onMessage: handleWebSocketMessage,
-          onError: (error) => {
-            console.error('WebSocket error:', error);
-            dispatch({
-              type: 'SET_ERROR',
-              payload: { type: 'send', error },
-            });
-          },
-          onMessageStatusUpdate: handleMessageStatusUpdate,
-        });
-        await webSocketService.connect();
-      } catch (error) {
-        setWsError(error instanceof Error ? error.message : 'Failed to initialize WebSocket');
-        console.error('Failed to initialize WebSocket:', error);
-      }
-    };
-
-    connectWebSocket();
-
+    dataSyncer.on('messageReceived', handleDataSyncerMessage);
+    dataSyncer.on('messageStatusUpdated', handleDataSyncerStatusUpdate);
     return () => {
-      webSocketService.disconnect();
+      dataSyncer.off('messageReceived');
+      dataSyncer.off('messageStatusUpdated');
     };
-  }, [handleWebSocketMessage, handleMessageStatusUpdate]);
+  }, [handleDataSyncerMessage, handleDataSyncerStatusUpdate]);
+
   // Join conversation when current conversation changes
   const joinConversation = useCallback((conversationId: string) => {
     if (currentConversationRef.current !== conversationId) {
@@ -170,13 +131,16 @@ export function useWebSocketConversations(): UseConversationsReturn {
   }, []);
 
   const loadConversations = useCallback(async () => {
+    if (!currentUser) {
+      return;
+    }
     try {
       dispatch({
         type: 'SET_LOADING',
         payload: { type: 'conversations', loading: true },
       });
-      const data = await conversationApi.getConversations();
-      dispatch({ type: 'SET_CONVERSATIONS', payload: data.data });
+      const conversations = await dataSyncer.loadConversations(currentUser.id);
+      dispatch({ type: 'SET_CONVERSATIONS', payload: conversations });
     } catch (err) {
       console.error('Failed to load conversations:', err);
       dispatch({
@@ -192,7 +156,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
         payload: { type: 'conversations', loading: false },
       });
     }
-  }, []);
+  }, [currentUser]);
 
   // Load messages for a specific conversation
   const loadMessages = useCallback(
@@ -206,12 +170,11 @@ export function useWebSocketConversations(): UseConversationsReturn {
           type: 'CLEAR_ERROR',
           payload: { type: 'messages', conversationId },
         });
-        const data = await conversationApi.getMessages(conversationId, {
-          limit: 50,
-        });
+        const messages = await dataSyncer.loadMessages(conversationId, 50);
+
         dispatch({
           type: 'SET_MESSAGES',
-          payload: { conversationId, messages: data.messages },
+          payload: { conversationId, messages },
         });
 
         // Join the conversation for real-time updates
@@ -271,17 +234,16 @@ export function useWebSocketConversations(): UseConversationsReturn {
       };
 
       try {
-        // Optimistic update
-        dispatch({
-          type: 'ADD_MESSAGE',
-          payload: { conversationId, message: tempMessage },
-        });
-
         if (webSocketService.isConnected()) {
           // Delay sending to allow optimistic update to be seen
           setTimeout(async () => {
             joinConversation(conversationId);
-            await webSocketService.sendMessage(conversationId, content, tempId);
+            dataSyncer.sendMessage(conversationId, content, tempId);
+            // Update data in UI
+            dispatch({
+              type: 'ADD_MESSAGE',
+              payload: { conversationId, message: tempMessage },
+            });
           }, 200);
         }
       } catch (err) {
@@ -325,7 +287,6 @@ export function useWebSocketConversations(): UseConversationsReturn {
     error: {
       conversations: errors.conversations,
       messages: errors.messages,
-      websocket: wsError,
       send: errors.send,
     },
     loadConversations,

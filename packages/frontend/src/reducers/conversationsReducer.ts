@@ -147,6 +147,38 @@ export function conversationsReducer(
       };
     }
 
+    case 'REPLACE_TEMP_MESSAGE': {
+      const { conversationId, tempId, message } = action.payload;
+      const conversationMessages = state.messages[conversationId] || [];
+
+      return {
+        ...state,
+        messages: {
+          ...state.messages,
+          [conversationId]: conversationMessages.map((msg) =>
+            msg.tempId === tempId || (msg.isTemporary && msg.id === tempId)
+              ? { ...message, isTemporary: false }
+              : msg
+          ),
+        },
+      };
+    }
+
+    case 'REMOVE_TEMP_MESSAGE': {
+      const { conversationId, tempId } = action.payload;
+      const conversationMessages = state.messages[conversationId] || [];
+
+      return {
+        ...state,
+        messages: {
+          ...state.messages,
+          [conversationId]: conversationMessages.filter(
+            (msg) => msg.tempId !== tempId && !(msg.isTemporary && msg.id === tempId)
+          ),
+        },
+      };
+    }
+
     default:
       return state;
   }

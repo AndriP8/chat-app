@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 export function Navigation() {
   const location = useLocation();
+  const { logout } = useAuth();
 
-  const navItems = [
-    { path: '/chat', label: 'Chat' },
-  ];
+  const navItems = [{ path: '/chat', label: 'Chat' }];
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -31,6 +31,13 @@ export function Navigation() {
               ))}
             </div>
           </div>
+          <button
+            onClick={logout}
+            type="button"
+            className="inline-flex cursor-pointer items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </nav>
