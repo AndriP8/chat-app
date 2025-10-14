@@ -28,7 +28,10 @@ export const MessageList = ({ messages, isLoading = false, conversationId }: Mes
 
     // Only mark messages from other users as read
     const unreadMessages = messages.filter(
-      (message) => message.sender_id !== currentUser.id && message.status !== 'read' && message.status !== "delivered"
+      (message) =>
+        message.sender_id !== currentUser.id &&
+        message.status !== 'read' &&
+        message.status !== 'delivered'
     );
 
     // Mark each unread message as read

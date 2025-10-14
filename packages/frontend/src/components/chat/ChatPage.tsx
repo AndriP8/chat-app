@@ -42,6 +42,7 @@ export default function ChatPage() {
         currentRoom={currentRoom}
         onRoomSelect={handleRoomSelect}
         isLoading={loading.conversations}
+        messages={messages}
       />
 
       {/* Main Chat Area */}
