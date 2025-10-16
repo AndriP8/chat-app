@@ -104,7 +104,10 @@ export class DataSyncer {
         await messageScheduler.cleanupProcessedMessage(message.tempId);
 
         // Notify UI about the ID change
-        this.eventListeners.messageReceived?.(replacedMessage);
+        this.eventListeners.messageReceived?.({
+          ...replacedMessage,
+          tempId: message.tempId,
+        });
       } catch (error) {
         console.error('Failed to replace temporary message:', error);
         // Fallback to regular upsert

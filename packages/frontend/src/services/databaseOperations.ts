@@ -198,6 +198,7 @@ export class DatabaseOperations {
           ...serverMessage,
           created_at: serverMessage.created_at || new Date(),
           updated_at: serverMessage.updated_at || new Date(),
+          tempId: undefined,
         };
         await db.messages.add(newMessage);
 
