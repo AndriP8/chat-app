@@ -36,17 +36,17 @@ interface MessageStatusData {
 
 type WebSocketMessage =
   | {
-    type: 'send_message';
-    data: SendMessageData;
-  }
+      type: 'send_message';
+      data: SendMessageData;
+    }
   | {
-    type: 'join_conversation' | 'leave_conversation';
-    data: ConversationData;
-  }
+      type: 'join_conversation' | 'leave_conversation';
+      data: ConversationData;
+    }
   | {
-    type: 'message_delivered' | 'message_read';
-    data: MessageStatusData;
-  };
+      type: 'message_delivered' | 'message_read';
+      data: MessageStatusData;
+    };
 
 interface WebSocketConnection {
   socket: WebSocket;
@@ -95,15 +95,31 @@ class ConnectionManager {
     }
   }
 
-  broadcastToConversation(conversationId: string, message: Record<string, unknown>): void {
-    for (const [_userId, connections] of this.userConnections) {
-      for (const connection of connections) {
-        if (
-          connection.conversationIds.has(conversationId)
-        ) {
-          connection.socket.send(JSON.stringify(message));
+  async broadcastToConversation(
+    conversationId: string,
+    message: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      const participants = await db
+        .select({ user_id: conversationParticipants.user_id })
+        .from(conversationParticipants)
+        .where(eq(conversationParticipants.conversation_id, conversationId));
+
+      const participantIds = new Set(participants.map((p) => p.user_id));
+
+      for (const [userId, connections] of this.userConnections) {
+        if (participantIds.has(userId)) {
+          for (const connection of connections) {
+            try {
+              connection.socket.send(JSON.stringify(message));
+            } catch (error) {
+              console.error(`Failed to send message to user ${userId}:`, error);
+            }
+          }
         }
       }
+    } catch (error) {
+      console.error('Error broadcasting to conversation:', error);
     }
   }
 }
@@ -234,7 +250,7 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
         };
 
         // Broadcast message to all participants in the conversation
-        connectionManager.broadcastToConversation(conversationId, {
+        await connectionManager.broadcastToConversation(conversationId, {
           type: 'message',
           data: { message: messageResponse },
         });
@@ -329,7 +345,7 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           .set({ status: 'delivered', updated_at: new Date() })
           .where(eq(messages.id, data.messageId));
 
-        connectionManager.broadcastToConversation(data.conversationId, {
+        await connectionManager.broadcastToConversation(data.conversationId, {
           type: 'message_status_updated',
           data: {
             messageId: data.messageId,
@@ -390,7 +406,7 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
             .set({ status: 'read', updated_at: new Date() })
             .where(eq(messages.id, data.messageId));
 
-          connectionManager.broadcastToConversation(data.conversationId, {
+          await connectionManager.broadcastToConversation(data.conversationId, {
             type: 'message_status_updated',
             data: {
               messageId: data.messageId,
