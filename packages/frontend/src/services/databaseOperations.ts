@@ -196,8 +196,8 @@ export class DatabaseOperations {
 
         const newMessage: Message = {
           ...serverMessage,
-          created_at: serverMessage.created_at || new Date(),
-          updated_at: serverMessage.updated_at || new Date(),
+          created_at: serverMessage.created_at ? ensureDate(serverMessage.created_at) : new Date(),
+          updated_at: serverMessage.updated_at ? ensureDate(serverMessage.updated_at) : new Date(),
           tempId: undefined,
         };
         await db.messages.add(newMessage);
@@ -396,7 +396,11 @@ export class DatabaseOperations {
     status: SendMessageRequest['status']
   ): Promise<SendMessageRequest[]> {
     try {
-      return await db.send_message_requests.where('status').equals(status).toArray();
+      const requests = await db.send_message_requests.where('status').equals(status).toArray();
+
+      return requests.sort(
+        (a, b) => ensureDate(a.created_at).getTime() - ensureDate(b.created_at).getTime()
+      );
     } catch (error) {
       throw new Error(`Failed to get send requests by status: ${error}`);
     }

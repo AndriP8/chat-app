@@ -132,36 +132,24 @@ export class MessageScheduler {
 
   /**
    * Process the message queue
-   * Handles pending and failed messages with retry logic, batch processing, and priority
    */
   private async processQueue(): Promise<void> {
-    if (this.isProcessing || !this.sendMessageCallback) {
-      return;
-    }
-
-    this.isProcessing = true;
-
     try {
-      // Get all pending requests
-      const pendingRequests = await dbOps.getPendingSendRequests();
+      const [pendingRequests, retryRequests] = await Promise.all([
+        dbOps.getPendingSendRequests(),
+        this.getRetryableFailedRequests(),
+      ]);
 
-      // Get failed requests that are ready for retry
-      const failedRequests = await this.getRetryableFailedRequests();
-
-      const allRequests = [...pendingRequests, ...failedRequests];
+      const allRequests = [...pendingRequests, ...retryRequests];
 
       if (allRequests.length === 0) {
         return;
       }
 
-      // Process all requests
-      for (const request of allRequests) {
-        await this.processRequest(request);
-      }
+      // Process all requests concurrently
+      await Promise.all(allRequests.map((request) => this.processRequest(request)));
     } catch (error) {
-      console.error('Error in processQueue:', error);
-    } finally {
-      this.isProcessing = false;
+      console.error('Error processing message queue:', error);
     }
   }
 
@@ -173,19 +161,19 @@ export class MessageScheduler {
       const failedRequests = await dbOps.getSendRequestsByStatus('failed');
 
       const now = new Date();
+      const currentTime = now.getTime();
 
       return failedRequests.filter((request: SendMessageRequest) => {
         if (request.retry_count >= this.config.maxRetries) {
           return false;
         }
 
-        // Calculate delay based on exponential backoff
-        const delay = this.calculateRetryDelay(request.retry_count);
-        const nextRetryTime = new Date(
-          ensureDate(request.last_sent_at || request.created_at).getTime() + delay
-        );
+        // Use retry_count - 1 because retry_count was already incremented when the message failed
+        const expectedDelay = this.calculateRetryDelay(request.retry_count - 1);
+        const lastAttemptTime = ensureDate(request.last_sent_at || request.created_at).getTime();
+        const nextRetryTime = lastAttemptTime + expectedDelay;
 
-        return now >= nextRetryTime;
+        return currentTime >= nextRetryTime;
       });
     } catch (error) {
       console.error('Error getting retryable failed requests:', error);
@@ -197,7 +185,8 @@ export class MessageScheduler {
    * Calculate retry delay using exponential backoff
    */
   private calculateRetryDelay(failCount: number): number {
-    const delay = this.config.baseDelayMs * 2 ** failCount;
+    const delay =
+      failCount === 0 ? this.config.baseDelayMs : this.config.baseDelayMs * 2 ** failCount;
     return Math.min(delay, this.config.maxDelayMs);
   }
 
