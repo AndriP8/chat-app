@@ -234,18 +234,16 @@ export function useWebSocketConversations(): UseConversationsReturn {
       };
 
       try {
+        dispatch({
+          type: 'ADD_MESSAGE',
+          payload: { conversationId, message: tempMessage },
+        });
+
         if (webSocketService.isConnected()) {
-          // Delay sending to allow optimistic update to be seen
-          setTimeout(async () => {
-            joinConversation(conversationId);
-            dataSyncer.sendMessage(conversationId, content, tempId);
-            // Update data in UI
-            dispatch({
-              type: 'ADD_MESSAGE',
-              payload: { conversationId, message: tempMessage },
-            });
-          }, 200);
+          joinConversation(conversationId);
         }
+        
+        await dataSyncer.sendMessage(conversationId, content, tempId);
       } catch (err) {
         console.error('Failed to send message:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to send message';

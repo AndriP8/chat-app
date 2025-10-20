@@ -41,6 +41,10 @@ export class DataSyncer {
         throw new Error(`Message with id ${request.message_id} not found`);
       }
 
+      if (!this.webSocketService.isConnected()) {
+        throw new Error('WebSocket is not connected');
+      }
+
       await this.webSocketService.sendMessage(message.conversation_id, message.content, message.id);
 
       return {
