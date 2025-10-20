@@ -11,6 +11,7 @@ export interface DataSyncConfig {
   baseDelayMs?: number;
   maxDelayMs?: number;
   processingIntervalMs?: number;
+  currentUserId?: string;
 }
 
 /**
@@ -60,7 +61,7 @@ export async function initializeDataSync(config?: DataSyncConfig): Promise<void>
     await webSocketService.connect();
 
     // Initialize DataSyncer with the WebSocket adapter
-    await dataSyncer.initialize(webSocketService);
+    await dataSyncer.initialize(webSocketService, config?.currentUserId);
 
     console.log('Data Sync layer initialized successfully');
   } catch (error) {

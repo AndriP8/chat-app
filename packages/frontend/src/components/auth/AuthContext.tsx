@@ -134,6 +134,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               baseDelayMs: 1000,
               maxDelayMs: 30000,
               processingIntervalMs: 5000,
+              currentUserId: authState.user.id,
             });
           }
         } catch (error) {

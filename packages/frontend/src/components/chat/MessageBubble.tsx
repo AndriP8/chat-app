@@ -16,8 +16,8 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
   const renderStatusIcon = () => {
     if (!isOwn) return null;
     switch (message.status) {
-      case "sending":
-        return <Clock size={12} className="text-gray-400 animate-pulse" />
+      case 'sending':
+        return <Clock size={12} className="text-gray-400 animate-pulse" />;
       case 'sent':
         return <Check size={12} className="text-gray-500" />;
       case 'delivered':
@@ -67,10 +67,11 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
       <div className={`flex flex-col max-w-xs lg:max-w-md ${isOwn ? 'items-end' : 'items-start'}`}>
         {/* Message bubble */}
         <div
-          className={`px-4 py-2 rounded-2xl wrap-anywhere ${isOwn
+          className={`px-4 py-2 rounded-2xl wrap-anywhere ${
+            isOwn
               ? 'bg-blue-500 text-white rounded-br-md'
               : 'bg-gray-100 text-gray-900 rounded-bl-md'
-            } ${message.status === 'failed' ? 'border border-red-200' : ''}`}
+          } ${message.status === 'failed' ? 'border border-red-200' : ''}`}
         >
           <p className="text-sm leading-relaxed">{message.content}</p>
         </div>

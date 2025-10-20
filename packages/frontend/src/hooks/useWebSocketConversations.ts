@@ -83,19 +83,27 @@ export function useWebSocketConversations(): UseConversationsReturn {
     async (messageId: string, status: DatabaseMessage['status']) => {
       try {
         for (const [conversationId, conversationMessages] of Object.entries(messagesRef.current)) {
-          const messageIndex = conversationMessages.findIndex((msg) => msg.id === messageId);
+          const messageIndex = conversationMessages.findIndex((msg) => msg.id === messageId || msg.tempId === messageId);
           if (messageIndex !== -1) {
+            const message = conversationMessages[messageIndex];
+            const updates: Partial<UIMessage> = { status };
+            
+            // Add timestamps for status transitions
+            const now = new Date();
+            if (status === 'sent' && !message.sentAt) {
+              updates.sentAt = now;
+            } else if (status === 'delivered' && !message.deliveredAt) {
+              updates.deliveredAt = now;
+            } else if (status === 'read' && !message.readAt) {
+              updates.readAt = now;
+            }
+
             dispatch({
               type: 'UPDATE_MESSAGE',
               payload: {
                 conversationId,
-                messageId,
-                updates: {
-                  status,
-                  ...(status === 'sent' && { sentAt: new Date() }),
-                  ...(status === 'delivered' && { deliveredAt: new Date() }),
-                  ...(status === 'read' && { readAt: new Date() }),
-                },
+                messageId: message.id,
+                updates,
               },
             });
             break;

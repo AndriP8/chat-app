@@ -20,16 +20,18 @@ export class DataSyncer {
   private webSocketService: WebSocketService | null = null;
   private eventListeners: Partial<SyncEvents> = {};
   private isInitialized = false;
+  private currentUserId: string | null = null;
 
   /**
    * Initialize the Data Syncer with WebSocket service
    */
-  async initialize(webSocketService: WebSocketService): Promise<void> {
+  async initialize(webSocketService: WebSocketService, currentUserId?: string): Promise<void> {
     if (this.isInitialized) {
       throw new Error('DataSyncer is already initialized');
     }
 
     this.webSocketService = webSocketService;
+    this.currentUserId = currentUserId || null;
 
     messageScheduler.setSendMessageCallback(async (request: SendMessageRequest) => {
       if (!this.webSocketService) {
@@ -49,7 +51,6 @@ export class DataSyncer {
 
       return {
         ...message,
-        status: 'sent' as const,
         updated_at: new Date(),
       };
     });
@@ -96,6 +97,9 @@ export class DataSyncer {
    * Handle incoming message from WebSocket
    */
   private handleIncomingMessage = async (message: Message): Promise<void> => {
+    if (!this.webSocketService) {
+      throw new Error('WebSocket service not available');
+    }
     if (message.tempId) {
       try {
         // Replace temporary message with server message
@@ -112,6 +116,14 @@ export class DataSyncer {
           ...replacedMessage,
           tempId: message.tempId,
         });
+
+        if (message.sender_id !== this.currentUserId) {
+          try {
+            this.webSocketService.markMessageDelivered(message.id, message.conversation_id);
+          } catch (error) {
+            console.error('Failed to mark message as delivered:', error);
+          }
+        }
       } catch (error) {
         console.error('Failed to replace temporary message:', error);
         // Fallback to regular upsert
@@ -175,6 +187,9 @@ export class DataSyncer {
    * Load conversations from local database with fallback to server
    */
   async loadConversations(userId: string): Promise<ChatRoom[]> {
+    if (!this.webSocketService) {
+      throw new Error('WebSocket service not available');
+    }
     try {
       const localConversations = await dbOps.getUserConversations(userId);
 
@@ -244,6 +259,10 @@ export class DataSyncer {
                 created_at: conversation.last_message.created_at,
                 updated_at: conversation.last_message.updated_at,
               });
+              this.webSocketService.markMessageDelivered(
+                conversation.last_message.id,
+                conversation.id
+              );
             } catch (error) {
               console.error(
                 `Failed to store last message for conversation ${conversation.id}:`,
