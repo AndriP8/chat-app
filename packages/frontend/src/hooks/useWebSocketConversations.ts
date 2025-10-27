@@ -7,6 +7,7 @@ import type { Message as DatabaseMessage } from '@/types/database';
 import { dataSyncer } from '@/services/dataSyncer';
 import { dbOps } from '@/services/databaseOperations';
 import { ensureDate } from '@/utils/helpers';
+import { broadcastChannelService } from '@/services/broadcastChannel';
 export interface UseConversationsReturn {
   conversations: ChatRoom[];
   messages: Record<string, UIMessage[]>;
@@ -29,6 +30,10 @@ export function useWebSocketConversations(): UseConversationsReturn {
   const { currentUser } = useAuth();
   const currentConversationRef = useRef<string | null>(null);
 
+  // Message deduplication tracking
+  const processedMessagesRef = useRef<Set<string>>(new Set());
+  const processedStatusUpdatesRef = useRef<Set<string>>(new Set());
+
   const { conversations, messages, loading, errors } = state;
   const messagesRef = useRef(messages);
 
@@ -40,6 +45,12 @@ export function useWebSocketConversations(): UseConversationsReturn {
   const handleDataSyncerMessage = useCallback(
     async (message: DatabaseMessage) => {
       try {
+        const messageKey = message.id || message.tempId;
+        if (!messageKey || processedMessagesRef.current.has(messageKey)) return;
+
+        // Mark as processed
+        processedMessagesRef.current.add(messageKey);
+
         const sender = await dbOps.getUser(message.sender_id);
         if (!sender) return;
 
@@ -82,12 +93,19 @@ export function useWebSocketConversations(): UseConversationsReturn {
   const handleDataSyncerStatusUpdate = useCallback(
     async (messageId: string, status: DatabaseMessage['status']) => {
       try {
+        const statusUpdateKey = `${messageId}-${status}`;
+
+        if (processedStatusUpdatesRef.current.has(statusUpdateKey)) return;
+
+        processedStatusUpdatesRef.current.add(statusUpdateKey);
+
         for (const [conversationId, conversationMessages] of Object.entries(messagesRef.current)) {
-          const messageIndex = conversationMessages.findIndex((msg) => msg.id === messageId || msg.tempId === messageId);
+          const messageIndex = conversationMessages.findIndex(
+            (msg) => msg.id === messageId || msg.tempId === messageId
+          );
           if (messageIndex !== -1) {
             const message = conversationMessages[messageIndex];
             const updates: Partial<UIMessage> = { status };
-            
             // Add timestamps for status transitions
             const now = new Date();
             if (status === 'sent' && !message.sentAt) {
@@ -119,9 +137,17 @@ export function useWebSocketConversations(): UseConversationsReturn {
   useEffect(() => {
     dataSyncer.on('messageReceived', handleDataSyncerMessage);
     dataSyncer.on('messageStatusUpdated', handleDataSyncerStatusUpdate);
+
+    // BroadcastChannel listeners for cross-tab synchronization
+    broadcastChannelService.setEventHandlers({
+      onMessageReceived: handleDataSyncerMessage,
+      onMessageStatusUpdated: handleDataSyncerStatusUpdate,
+    });
+
     return () => {
       dataSyncer.off('messageReceived');
       dataSyncer.off('messageStatusUpdated');
+      broadcastChannelService.destroy();
     };
   }, [handleDataSyncerMessage, handleDataSyncerStatusUpdate]);
 
@@ -250,7 +276,6 @@ export function useWebSocketConversations(): UseConversationsReturn {
         if (webSocketService.isConnected()) {
           joinConversation(conversationId);
         }
-        
         await dataSyncer.sendMessage(conversationId, content, tempId);
       } catch (err) {
         console.error('Failed to send message:', err);

@@ -21,9 +21,9 @@ export const ChatSidebar = ({
     return rooms.map((room) => {
       const roomMessages = messages[room.id];
       if (roomMessages && roomMessages.length > 0) {
-        const latestMessage = roomMessages
-          .filter((msg) => !msg.isTemporary)
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+        const latestMessage = [...roomMessages].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
 
         if (latestMessage) {
           return {

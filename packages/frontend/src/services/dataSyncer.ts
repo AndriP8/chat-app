@@ -1,5 +1,6 @@
 import { dbOps } from './databaseOperations';
 import { messageScheduler } from './messageScheduler';
+import { broadcastChannelService } from './broadcastChannel';
 import type { Message, SendMessageRequest } from '../types/database';
 import type { WebSocketService } from './websocket';
 import conversationApi from './api/conversations';
@@ -111,6 +112,8 @@ export class DataSyncer {
         // Clean up the send request for this message
         await messageScheduler.cleanupProcessedMessage(message.tempId);
 
+        broadcastChannelService.broadcastMessageReceived(replacedMessage);
+
         // Notify UI about the ID change
         this.eventListeners.messageReceived?.({
           ...replacedMessage,
@@ -128,11 +131,17 @@ export class DataSyncer {
         console.error('Failed to replace temporary message:', error);
         // Fallback to regular upsert
         await dbOps.upsertMessage(message);
+
+        broadcastChannelService.broadcastMessageReceived(message);
+
         this.eventListeners.messageReceived?.(message);
       }
     } else {
       // This is a new message from another user or a regular message
       await dbOps.upsertMessage(message);
+
+      broadcastChannelService.broadcastMessageReceived(message);
+
       this.eventListeners.messageReceived?.(message);
     }
   };
@@ -174,6 +183,10 @@ export class DataSyncer {
             `Cleanup by message ID failed, this is normal for temp IDs: ${update.messageId}`
           );
         }
+      }
+
+      if (messageUpdated) {
+        broadcastChannelService.broadcastMessageStatusUpdated(update.messageId, update.status);
       }
 
       // Notify UI about the status update
