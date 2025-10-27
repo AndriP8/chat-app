@@ -1,13 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  varchar,
-  text,
-  timestamp,
-  integer,
-  index,
-  primaryKey,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, index, primaryKey } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table
@@ -87,58 +78,11 @@ export const messages = pgTable(
   })
 );
 
-// Draft messages table
-export const draftMessages = pgTable(
-  'draft_messages',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    content: text('content').notNull(),
-    conversation_id: uuid('conversation_id')
-      .references(() => conversations.id, { onDelete: 'cascade' })
-      .notNull(),
-    user_id: uuid('user_id')
-      .references(() => users.id, { onDelete: 'cascade' })
-      .notNull(),
-    created_at: timestamp('created_at').defaultNow().notNull(),
-    updated_at: timestamp('updated_at').defaultNow().notNull(),
-  },
-  (table) => ({
-    conversation_idx: index('draft_message_conversation_idx').on(table.conversation_id),
-    user_idx: index('draft_message_user_idx').on(table.user_id),
-    conversation_user_idx: index('draft_message_conversation_user_idx').on(
-      table.conversation_id,
-      table.user_id
-    ),
-  })
-);
-
-// Send message requests table
-export const sendMessageRequests = pgTable(
-  'send_message_requests',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    message_id: uuid('message_id')
-      .references(() => messages.id, { onDelete: 'cascade' })
-      .notNull(),
-    status: varchar('status', { length: 20 }).default('pending').notNull(), // 'pending', 'in_flight', 'failed'
-    last_sent_at: timestamp('last_sent_at'),
-    retry_count: integer('retry_count').default(0).notNull(),
-    error_message: text('error_message'),
-    created_at: timestamp('created_at').defaultNow().notNull(),
-  },
-  (table) => ({
-    message_idx: index('send_message_request_message_idx').on(table.message_id),
-    status_idx: index('send_message_request_status_idx').on(table.status),
-    last_sent_at_idx: index('send_message_request_last_sent_at_idx').on(table.last_sent_at),
-  })
-);
-
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   conversation_participants: many(conversationParticipants),
   messages: many(messages),
   created_conversations: many(conversations),
-  draft_messages: many(draftMessages),
 }));
 
 export const conversationsRelations = relations(conversations, ({ one, many }) => ({
@@ -148,7 +92,6 @@ export const conversationsRelations = relations(conversations, ({ one, many }) =
   }),
   participants: many(conversationParticipants),
   messages: many(messages),
-  draft_messages: many(draftMessages),
 }));
 
 export const conversationParticipantsRelations = relations(conversationParticipants, ({ one }) => ({
@@ -162,7 +105,7 @@ export const conversationParticipantsRelations = relations(conversationParticipa
   }),
 }));
 
-export const messagesRelations = relations(messages, ({ one, many }) => ({
+export const messagesRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations, {
     fields: [messages.conversation_id],
     references: [conversations.id],
@@ -170,25 +113,6 @@ export const messagesRelations = relations(messages, ({ one, many }) => ({
   sender: one(users, {
     fields: [messages.sender_id],
     references: [users.id],
-  }),
-  send_message_requests: many(sendMessageRequests),
-}));
-
-export const draftMessagesRelations = relations(draftMessages, ({ one }) => ({
-  conversation: one(conversations, {
-    fields: [draftMessages.conversation_id],
-    references: [conversations.id],
-  }),
-  user: one(users, {
-    fields: [draftMessages.user_id],
-    references: [users.id],
-  }),
-}));
-
-export const sendMessageRequestsRelations = relations(sendMessageRequests, ({ one }) => ({
-  message: one(messages, {
-    fields: [sendMessageRequests.message_id],
-    references: [messages.id],
   }),
 }));
 
@@ -201,7 +125,3 @@ export type ConversationParticipant = typeof conversationParticipants.$inferSele
 export type NewConversationParticipant = typeof conversationParticipants.$inferInsert;
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
-export type DraftMessage = typeof draftMessages.$inferSelect;
-export type NewDraftMessage = typeof draftMessages.$inferInsert;
-export type SendMessageRequest = typeof sendMessageRequests.$inferSelect;
-export type NewSendMessageRequest = typeof sendMessageRequests.$inferInsert;
