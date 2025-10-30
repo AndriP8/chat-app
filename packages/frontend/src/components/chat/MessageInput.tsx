@@ -1,24 +1,54 @@
 import { SendHorizonal } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../auth/AuthContext';
+import { draftMessageService } from '@/services/draftMessageService';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => void;
   placeholder?: string;
+  conversationId?: string;
 }
 
 export const MessageInput = ({
   onSendMessage,
   placeholder = 'Type a message...',
+  conversationId,
 }: MessageInputProps) => {
   const [message, setMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { currentUser } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!conversationId || !currentUser?.id) return;
+    const loadDraft = async () => {
+      try {
+        const draft = await draftMessageService.getDraft(conversationId, currentUser.id);
+        if (draft) {
+          setMessage(draft.content);
+        } else {
+          setMessage('');
+        }
+      } catch (error) {
+        console.error('Failed to load draft message:', error);
+      }
+    };
+
+    loadDraft();
+  }, [conversationId, currentUser?.id]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedMessage = message.trim();
 
-    if (trimmedMessage) {
+    if (trimmedMessage && conversationId && currentUser?.id) {
       onSendMessage(trimmedMessage);
+
+      try {
+        await draftMessageService.deleteDraft(conversationId, currentUser.id);
+      } catch (error) {
+        console.error('Failed to delete draft message:', error);
+      }
+
       setMessage('');
 
       // Reset textarea height
@@ -36,12 +66,23 @@ export const MessageInput = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
+    const newValue = e.target.value;
+    setMessage(newValue);
 
-    // Auto-resize textarea
-    const textarea = e.target;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    // Save draft with debouncing
+    if (conversationId && currentUser?.id) {
+      draftMessageService.saveDraftDebounced(conversationId, currentUser.id, newValue);
+    }
+  };
+
+  const handleBlur = async () => {
+    if (conversationId && currentUser?.id) {
+      try {
+        await draftMessageService.saveDraftOnBlur(conversationId, currentUser.id, message);
+      } catch (error) {
+        console.error('Failed to save draft on blur:', error);
+      }
+    }
   };
 
   return (
@@ -49,14 +90,15 @@ export const MessageInput = ({
       <form onSubmit={handleSubmit} className="flex items-center gap-3">
         {/* Message input */}
         <textarea
+          id="message_content"
           ref={textareaRef}
           value={message}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
           placeholder={placeholder}
-          rows={1}
-          className="w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ minHeight: '48px', maxHeight: '120px' }}
+          className="w-full field-sizing-content px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ minHeight: '48px', maxHeight: '420px' }}
         />
 
         {/* Send button */}

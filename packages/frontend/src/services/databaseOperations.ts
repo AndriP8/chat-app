@@ -5,6 +5,7 @@ import type {
   Message,
   ConversationParticipant,
   SendMessageRequest,
+  DraftMessage,
 } from '../types/database';
 import { ensureDate } from '@/utils/helpers';
 
@@ -469,6 +470,73 @@ export class DatabaseOperations {
     } catch (error) {
       console.error(`Failed to cleanup orphaned temporary messages: ${error}`);
       return 0;
+    }
+  }
+
+  /**
+   * Save or update a draft message for a conversation
+   */
+  async saveDraftMessage(
+    draft: Omit<DraftMessage, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<DraftMessage> {
+    try {
+      const existingDraft = await db.draft_messages
+        .where('[conversation_id+user_id]')
+        .equals([draft.conversation_id, draft.user_id])
+        .first();
+
+      if (existingDraft) {
+        const updatedDraft = {
+          ...existingDraft,
+          content: draft.content,
+          updated_at: new Date(),
+        };
+        await db.draft_messages.update(existingDraft.id, updatedDraft);
+        return updatedDraft;
+      }
+
+      const newDraft: DraftMessage = {
+        id: `draft_${draft.conversation_id}_${draft.user_id}_${Date.now()}`,
+        ...draft,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+      await db.draft_messages.add(newDraft);
+      return newDraft;
+    } catch (error) {
+      throw new Error(`Failed to save draft message: ${error}`);
+    }
+  }
+
+  /**
+   * Get draft message for a conversation and user
+   */
+  async getDraftMessage(conversationId: string, userId: string): Promise<DraftMessage | undefined> {
+    try {
+      return await db.draft_messages
+        .where('[conversation_id+user_id]')
+        .equals([conversationId, userId])
+        .first();
+    } catch (error) {
+      throw new Error(`Failed to get draft message: ${error}`);
+    }
+  }
+
+  /**
+   * Delete draft message for a conversation and user
+   */
+  async deleteDraftMessage(conversationId: string, userId: string): Promise<void> {
+    try {
+      const existingDraft = await db.draft_messages
+        .where('[conversation_id+user_id]')
+        .equals([conversationId, userId])
+        .first();
+
+      if (existingDraft) {
+        await db.draft_messages.delete(existingDraft.id);
+      }
+    } catch (error) {
+      throw new Error(`Failed to delete draft message: ${error}`);
     }
   }
 

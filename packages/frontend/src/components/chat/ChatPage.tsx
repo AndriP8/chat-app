@@ -67,7 +67,10 @@ export default function ChatPage() {
               conversationId={currentRoom.id}
             />
             {/* Message Input */}
-            <MessageInput onSendMessage={handleSendMessage} />
+            <MessageInput 
+              onSendMessage={handleSendMessage} 
+              conversationId={currentRoom.id}
+            />
           </>
         ) : (
           /* Empty State */
