@@ -9,6 +9,7 @@ export const sendMessageSchema = z.object({
   conversationId: z.string().uuid('Invalid conversation ID format'),
   content: z.string().min(1).max(5000, 'Message content too long'),
   tempId: z.string().min(1, 'Temporary ID is required'),
+  sequenceNumber: z.number().int().positive().optional(),
 });
 // Response schemas
 export const userResponseSchema = z.object({
@@ -30,6 +31,7 @@ export const messageResponseSchema = z.object({
   updated_at: z.date(),
   sender: userResponseSchema.omit({ created_at: true, updated_at: true }),
   tempId: z.string().optional(),
+  sequence_number: z.number().int().positive().optional(),
 });
 
 export const conversationResponseSchema = z.object({

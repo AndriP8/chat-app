@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, index, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, index, primaryKey, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table
@@ -69,12 +69,14 @@ export const messages = pgTable(
     conversation_id: uuid('conversation_id')
       .references(() => conversations.id, { onDelete: 'cascade' })
       .notNull(),
+    sequence_number: integer('sequence_number'),
   },
   (table) => ({
     conversation_idx: index('message_conversation_idx').on(table.conversation_id),
     sender_idx: index('message_sender_idx').on(table.sender_id),
     created_at_idx: index('message_created_at_idx').on(table.created_at),
     status_idx: index('message_status_idx').on(table.status),
+    ordering_idx: index('message_ordering_idx').on(table.conversation_id, table.sender_id, table.sequence_number),
   })
 );
 

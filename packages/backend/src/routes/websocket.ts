@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { db, users, conversations, conversationParticipants, messages } from '@/db';
 import { envConfig } from '@/config/env';
 import { sendMessageSchema, type MessageResponse } from '@/schemas/conversation';
+import { messageOrderingService } from '@/services/messageOrderingService';
 
 interface JWTPayload {
   user_id: string;
@@ -191,7 +192,7 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           return;
         }
 
-        const { conversationId, content, tempId } = data;
+        const { conversationId, content, tempId, sequenceNumber } = data;
 
         // Check if user is participant in conversation
         const isParticipant = await isUserInConversation(user.id, conversationId);
@@ -213,6 +214,7 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
             sender_id: user.id,
             conversation_id: conversationId,
             status: 'sent',
+            sequence_number: sequenceNumber ?? null,
           })
           .returning();
 
@@ -226,34 +228,44 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           return;
         }
 
-        // Update conversation's updated_at timestamp
-        await db
-          .update(conversations)
-          .set({ updated_at: new Date() })
-          .where(eq(conversations.id, conversationId));
+        const messagesToDeliver = await messageOrderingService.processMessage(newMessage);
 
-        const messageResponse: MessageResponse = {
-          id: newMessage.id,
-          content: newMessage.content,
-          status: newMessage.status as 'sending' | 'sent' | 'delivered' | 'read' | 'failed',
-          sender_id: newMessage.sender_id,
-          conversation_id: newMessage.conversation_id,
-          created_at: newMessage.created_at,
-          updated_at: newMessage.updated_at,
-          sender: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            profile_picture_url: user.profile_picture_url ?? null,
-          },
-          tempId,
-        };
+        if (messagesToDeliver.length > 0) {
+          await db
+            .update(conversations)
+            .set({ updated_at: new Date() })
+            .where(eq(conversations.id, conversationId));
 
-        // Broadcast message to all participants in the conversation
-        await connectionManager.broadcastToConversation(conversationId, {
-          type: 'message',
-          data: { message: messageResponse },
-        });
+          for (const messageToDeliver of messagesToDeliver) {
+            const messageResponse: MessageResponse = {
+              id: messageToDeliver.id,
+              content: messageToDeliver.content,
+              status: messageToDeliver.status as
+                | 'sending'
+                | 'sent'
+                | 'delivered'
+                | 'read'
+                | 'failed',
+              sender_id: messageToDeliver.sender_id,
+              conversation_id: messageToDeliver.conversation_id,
+              created_at: messageToDeliver.created_at,
+              updated_at: messageToDeliver.updated_at,
+              sender: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                profile_picture_url: user.profile_picture_url ?? null,
+              },
+              tempId: messageToDeliver.id === newMessage.id ? tempId : undefined,
+              sequence_number: messageToDeliver.sequence_number ?? undefined,
+            };
+
+            await connectionManager.broadcastToConversation(conversationId, {
+              type: 'message',
+              data: { message: messageResponse },
+            });
+          }
+        }
       } catch (error) {
         console.error('Send message error:', error);
         socket.send(
