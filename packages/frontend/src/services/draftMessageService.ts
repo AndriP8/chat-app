@@ -26,7 +26,6 @@ export class DraftMessageService {
     }, this.DEBOUNCE_DELAY);
 
     this.saveTimeouts.set(key, timeout);
-    console.log(this.saveTimeouts.forEach((value, key) => console.log(key, value)));
   }
 
   /**

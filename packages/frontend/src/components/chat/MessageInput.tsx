@@ -86,7 +86,7 @@ export const MessageInput = ({
   };
 
   return (
-    <div className="p-4 bg-white border-t border-gray-200">
+    <div className="p-4 bg-white border-t border-gray-200 sticky bottom-0">
       <form onSubmit={handleSubmit} className="flex items-center gap-3">
         {/* Message input */}
         <textarea
@@ -105,7 +105,7 @@ export const MessageInput = ({
         <button
           type="submit"
           disabled={!message.trim()}
-          className="flex-shrink-0 p-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="shrink-0 p-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           aria-label="Send message"
         >
           <SendHorizonal size={18} />

@@ -25,6 +25,7 @@ export interface Message {
   sender_id: string;
   conversation_id: string;
   tempId?: string;
+  sequence_number?: number;
 }
 
 export interface ConversationParticipant {
@@ -52,6 +53,13 @@ export interface SendMessageRequest {
   created_at: Date;
 }
 
+export interface SequenceCounter {
+  conversation_id: string;
+  user_id: string;
+  next_sequence: number;
+  updated_at: Date;
+}
+
 // Database schema types for Dexie
 export interface DatabaseSchema {
   users: User;
@@ -60,4 +68,5 @@ export interface DatabaseSchema {
   conversation_participants: ConversationParticipant;
   draft_messages: DraftMessage;
   send_message_requests: SendMessageRequest;
+  sequence_counters: SequenceCounter;
 }

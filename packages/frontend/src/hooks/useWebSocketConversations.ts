@@ -89,7 +89,6 @@ export function useWebSocketConversations(): UseConversationsReturn {
     },
     [currentUser]
   );
-
   const handleDataSyncerStatusUpdate = useCallback(
     async (messageId: string, status: DatabaseMessage['status']) => {
       try {
@@ -266,7 +265,6 @@ export function useWebSocketConversations(): UseConversationsReturn {
         updated_at: new Date(),
         isTemporary: true,
       };
-
       try {
         dispatch({
           type: 'ADD_MESSAGE',
@@ -276,7 +274,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
         if (webSocketService.isConnected()) {
           joinConversation(conversationId);
         }
-        await dataSyncer.sendMessage(conversationId, content, tempId);
+        await dataSyncer.sendMessage(conversationId, content, tempId, currentUser.id);
       } catch (err) {
         console.error('Failed to send message:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to send message';

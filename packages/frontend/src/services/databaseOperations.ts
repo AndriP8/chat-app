@@ -235,9 +235,22 @@ export class DatabaseOperations {
       }
 
       const messages = await query.toArray();
-      // Reverse sorting to get messages in chronological order
+
+      // Sort messages by created_at (primary) for chronological order
+      // When timestamps are equal, use sequence numbers to maintain order
       return messages
-        .sort((a, b) => ensureDate(a.created_at).getTime() - ensureDate(b.created_at).getTime())
+        .sort((a, b) => {
+          const timeA = ensureDate(a.created_at).getTime();
+          const timeB = ensureDate(b.created_at).getTime();
+
+          if (timeA !== timeB) {
+            return timeA - timeB;
+          }
+
+          const seqA = a.sequence_number ?? 0;
+          const seqB = b.sequence_number ?? 0;
+          return seqA - seqB;
+        })
         .slice(0, limit);
     } catch (error) {
       throw new Error(`Failed to get conversation messages: ${error}`);
@@ -590,6 +603,7 @@ export class DatabaseOperations {
           db.conversation_participants,
           db.draft_messages,
           db.send_message_requests,
+          db.sequence_counters,
         ],
         async () => {
           await db.users.clear();
@@ -598,6 +612,7 @@ export class DatabaseOperations {
           await db.conversation_participants.clear();
           await db.draft_messages.clear();
           await db.send_message_requests.clear();
+          await db.sequence_counters.clear();
         }
       );
     } catch (error) {

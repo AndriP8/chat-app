@@ -6,6 +6,7 @@ import type {
   ConversationParticipant,
   DraftMessage,
   SendMessageRequest,
+  SequenceCounter,
   DatabaseSchema,
 } from '../types/database';
 
@@ -16,6 +17,7 @@ class ChatDatabase extends Dexie {
   conversation_participants!: EntityTable<ConversationParticipant, 'conversation_id'>;
   draft_messages!: EntityTable<DraftMessage, 'id'>;
   send_message_requests!: EntityTable<SendMessageRequest, 'id'>;
+  sequence_counters!: EntityTable<SequenceCounter, 'conversation_id' | 'user_id'>;
 
   constructor() {
     super('ChatAppDatabase');
@@ -23,10 +25,12 @@ class ChatDatabase extends Dexie {
     this.version(1).stores({
       users: 'id, email, name, created_at',
       conversations: 'id, created_by, created_at, updated_at',
-      messages: 'id, conversation_id, sender_id, status, created_at, tempId',
+      messages:
+        'id, conversation_id, sender_id, status, created_at, tempId, [conversation_id+sender_id+sequence_number]',
       conversation_participants: '[conversation_id+user_id], conversation_id, user_id',
       draft_messages: 'id, conversation_id, user_id, [conversation_id+user_id], updated_at',
       send_message_requests: 'id, message_id, status, created_at, last_sent_at',
+      sequence_counters: '[conversation_id+user_id], conversation_id, user_id, updated_at',
     });
 
     // Add hooks for automatic timestamp updates
@@ -71,6 +75,15 @@ class ChatDatabase extends Dexie {
 
     this.send_message_requests.hook('creating', (_primKey, obj, _trans) => {
       obj.created_at = new Date();
+    });
+
+    this.sequence_counters.hook('creating', (_primKey, obj, _trans) => {
+      if (!obj.updated_at) obj.updated_at = new Date();
+    });
+
+    this.sequence_counters.hook('updating', (modifications, _primKey, _obj, _trans) => {
+      const mods = modifications as Partial<SequenceCounter>;
+      if (!mods.updated_at) mods.updated_at = new Date();
     });
   }
 

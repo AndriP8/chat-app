@@ -3,11 +3,11 @@ import type { Message } from '@/types/chat';
 // WebSocket message types based on backend implementation
 interface WebSocketMessage {
   type:
-  | 'send_message'
-  | 'join_conversation'
-  | 'leave_conversation'
-  | 'message_delivered'
-  | 'message_read';
+    | 'send_message'
+    | 'join_conversation'
+    | 'leave_conversation'
+    | 'message_delivered'
+    | 'message_read';
   data: SendMessageData | ConversationData | MessageStatusData | Record<string, unknown>;
 }
 
@@ -20,6 +20,8 @@ interface SendMessageData {
   conversationId: string;
   content: string;
   tempId?: string;
+  sequenceNumber?: number;
+  createdAt?: string;
 }
 
 interface ConversationData {
@@ -28,19 +30,34 @@ interface ConversationData {
 
 // WebSocket response types
 interface WebSocketResponse {
-  type: 'message' | 'error' | 'connected' | 'joined_conversation' | 'message_status_updated';
+  type:
+    | 'message'
+    | 'error'
+    | 'warning'
+    | 'connected'
+    | 'joined_conversation'
+    | 'message_status_updated'
+    | 'message_buffered';
   data:
-  | MessageResponseData
-  | ErrorResponseData
-  | ConnectedResponseData
-  | JoinedConversationData
-  | MessageStatusUpdatedData;
+    | MessageResponseData
+    | ErrorResponseData
+    | ConnectedResponseData
+    | JoinedConversationData
+    | MessageStatusUpdatedData
+    | MessageBufferedData;
 }
 
 interface MessageStatusUpdatedData {
   messageId: string;
   status: 'sent' | 'delivered' | 'read' | 'failed';
   updatedBy: string;
+}
+
+interface MessageBufferedData {
+  tempId?: string;
+  messageId: string;
+  sequenceNumber?: number;
+  status: 'buffered';
 }
 
 interface MessageResponseData {
@@ -51,7 +68,6 @@ interface ErrorResponseData {
   message: string;
   details?: Record<string, string[]>;
 }
-
 interface ConnectedResponseData {
   message: string;
 }
@@ -175,7 +191,13 @@ export class WebSocketService {
     }
   }
 
-  public sendMessage(conversationId: string, content: string, tempId?: string): Promise<void> {
+  public sendMessage(
+    conversationId: string,
+    content: string,
+    tempId?: string,
+    sequenceNumber?: number,
+    createdAt?: string
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
         reject(new Error('WebSocket is not connected'));
@@ -188,6 +210,8 @@ export class WebSocketService {
           conversationId,
           content,
           tempId,
+          sequenceNumber,
+          createdAt,
         },
       };
 

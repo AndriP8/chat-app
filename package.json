@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "A real-time chat application built with React and Node.js",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "pnpm run --parallel dev",
     "build": "pnpm run --recursive build",
@@ -18,5 +20,8 @@
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "volta": {
+    "node": "22.21.1"
   }
 }

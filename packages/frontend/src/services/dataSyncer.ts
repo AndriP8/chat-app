@@ -1,6 +1,7 @@
 import { dbOps } from './databaseOperations';
 import { messageScheduler } from './messageScheduler';
 import { broadcastChannelService } from './broadcastChannel';
+import { getNextSequenceNumber } from './sequenceNumber';
 import type { Message, SendMessageRequest } from '../types/database';
 import type { WebSocketService } from './websocket';
 import conversationApi from './api/conversations';
@@ -48,7 +49,13 @@ export class DataSyncer {
         throw new Error('WebSocket is not connected');
       }
 
-      await this.webSocketService.sendMessage(message.conversation_id, message.content, message.id);
+      await this.webSocketService.sendMessage(
+        message.conversation_id,
+        message.content,
+        message.id,
+        message.sequence_number,
+        message.created_at.toISOString()
+      );
 
       return {
         ...message,
@@ -365,16 +372,25 @@ export class DataSyncer {
   /**
    * Send a message through the scheduler
    */
-  async sendMessage(conversationId: string, content: string, tempId: string): Promise<void> {
+  async sendMessage(
+    conversationId: string,
+    content: string,
+    tempId: string,
+    userId: string
+  ): Promise<void> {
     try {
+      // Get next sequence number for this conversation and user
+      const sequenceNumber = await getNextSequenceNumber(conversationId, userId);
+
       // Create optimistic message in database
       const optimisticMessage: Omit<Message, 'created_at' | 'updated_at'> = {
         id: tempId, // Will be replaced with server ID
         conversation_id: conversationId,
-        sender_id: '',
+        sender_id: userId,
         content,
         status: 'sending',
         tempId: tempId,
+        sequence_number: sequenceNumber,
       };
 
       await dbOps.upsertMessage(optimisticMessage);
