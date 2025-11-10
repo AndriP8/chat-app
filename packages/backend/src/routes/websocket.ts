@@ -2,7 +2,14 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { WebSocket } from '@fastify/websocket';
 import jwt from 'jsonwebtoken';
 import { eq, and } from 'drizzle-orm';
-import { db, users, conversations, conversationParticipants, messages } from '@/db';
+import {
+  db,
+  users,
+  conversations,
+  conversationParticipants,
+  messages,
+  type NewMessage,
+} from '@/db';
 import { envConfig } from '@/config/env';
 import { sendMessageSchema, type MessageResponse } from '@/schemas/conversation';
 import { messageOrderingService } from '@/services/messageOrderingService';
@@ -19,7 +26,6 @@ interface AuthenticatedUser {
   profile_picture_url?: string | null;
 }
 
-// Types for WebSocket messages
 interface SendMessageData {
   conversationId: string;
   content: string;
@@ -55,9 +61,13 @@ interface WebSocketConnection {
   conversationIds: Set<string>;
 }
 
-// Connection manager to track active WebSocket connections
 class ConnectionManager {
   private userConnections = new Map<string, Set<WebSocketConnection>>();
+  private tempIdMappings = new Map<
+    string,
+    { messageId: string; conversationId: string; timestamp: number }
+  >();
+  private readonly TEMP_ID_TTL = 30000; // 30 seconds TTL for tempId mappings
 
   addConnection(connection: WebSocketConnection): void {
     const userId = connection.user.id;
@@ -74,6 +84,38 @@ class ConnectionManager {
       userConnections.delete(connection);
       if (userConnections.size === 0) {
         this.userConnections.delete(userId);
+      }
+    }
+  }
+
+  storeTempIdMapping(tempId: string, messageId: string, conversationId: string): void {
+    this.tempIdMappings.set(tempId, {
+      messageId,
+      conversationId,
+      timestamp: Date.now(),
+    });
+
+    this.cleanupExpiredTempIds();
+  }
+
+  getTempIdForMessage(messageId: string, conversationId: string): string | undefined {
+    for (const [tempId, mapping] of this.tempIdMappings.entries()) {
+      if (mapping.messageId === messageId && mapping.conversationId === conversationId) {
+        return tempId;
+      }
+    }
+    return undefined;
+  }
+
+  removeTempIdMapping(tempId: string): void {
+    this.tempIdMappings.delete(tempId);
+  }
+
+  private cleanupExpiredTempIds(): void {
+    const now = Date.now();
+    for (const [tempId, mapping] of this.tempIdMappings.entries()) {
+      if (now - mapping.timestamp > this.TEMP_ID_TTL) {
+        this.tempIdMappings.delete(tempId);
       }
     }
   }
@@ -127,20 +169,16 @@ class ConnectionManager {
 
 const connectionManager = new ConnectionManager();
 
-// Authenticate WebSocket connection
 async function authenticateWebSocket(request: FastifyRequest): Promise<AuthenticatedUser> {
-  // Try to get token from cookie first
   const token = request.cookies?.auth_token;
 
   if (!token) {
     throw new Error('No authentication token provided');
   }
 
-  // Verify token
   const payload = jwt.verify(token, envConfig.JWT_SECRET) as JWTPayload;
   const userId = payload.user_id;
 
-  // Get user from database
   const [user] = await db
     .select({
       id: users.id,
@@ -159,7 +197,6 @@ async function authenticateWebSocket(request: FastifyRequest): Promise<Authentic
   return user;
 }
 
-// Check if user is participant in conversation
 async function isUserInConversation(userId: string, conversationId: string): Promise<boolean> {
   const participants = await db
     .select({ user_id: conversationParticipants.user_id })
@@ -174,7 +211,6 @@ async function isUserInConversation(userId: string, conversationId: string): Pro
   return participants.length > 0;
 }
 
-// Handle incoming WebSocket messages
 async function handleWebSocketMessage(connection: WebSocketConnection, message: WebSocketMessage) {
   const { socket, user } = connection;
 
@@ -192,9 +228,8 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           return;
         }
 
-        const { conversationId, content, tempId, sequenceNumber } = data;
+        const { conversationId, content, tempId, sequenceNumber, createdAt } = data;
 
-        // Check if user is participant in conversation
         const isParticipant = await isUserInConversation(user.id, conversationId);
         if (!isParticipant) {
           socket.send(
@@ -206,17 +241,21 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           return;
         }
 
-        // Create message in database
-        const [newMessage] = await db
-          .insert(messages)
-          .values({
-            content,
-            sender_id: user.id,
-            conversation_id: conversationId,
-            status: 'sent',
-            sequence_number: sequenceNumber ?? null,
-          })
-          .returning();
+        // Insert the message immediately
+        const messageValues: NewMessage = {
+          content,
+          sender_id: user.id,
+          conversation_id: conversationId,
+          status: 'sent',
+          sequence_number: sequenceNumber ?? null,
+        };
+
+        if (createdAt) {
+          messageValues.created_at = new Date(createdAt);
+          messageValues.updated_at = new Date(createdAt);
+        }
+
+        const [newMessage] = await db.insert(messages).values(messageValues).returning();
 
         if (!newMessage) {
           socket.send(
@@ -228,42 +267,63 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           return;
         }
 
+        if (tempId) {
+          connectionManager.storeTempIdMapping(tempId, newMessage.id, conversationId);
+        }
+
         const messagesToDeliver = await messageOrderingService.processMessage(newMessage);
 
-        if (messagesToDeliver.length > 0) {
-          await db
-            .update(conversations)
-            .set({ updated_at: new Date() })
-            .where(eq(conversations.id, conversationId));
-
-          for (const messageToDeliver of messagesToDeliver) {
-            const messageResponse: MessageResponse = {
-              id: messageToDeliver.id,
-              content: messageToDeliver.content,
-              status: messageToDeliver.status as
-                | 'sending'
-                | 'sent'
-                | 'delivered'
-                | 'read'
-                | 'failed',
-              sender_id: messageToDeliver.sender_id,
-              conversation_id: messageToDeliver.conversation_id,
-              created_at: messageToDeliver.created_at,
-              updated_at: messageToDeliver.updated_at,
-              sender: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                profile_picture_url: user.profile_picture_url ?? null,
+        if (messagesToDeliver.length === 0) {
+          socket.send(
+            JSON.stringify({
+              type: 'message_buffered',
+              data: {
+                tempId,
+                messageId: newMessage.id,
+                sequenceNumber,
+                status: 'buffered',
               },
-              tempId: messageToDeliver.id === newMessage.id ? tempId : undefined,
-              sequence_number: messageToDeliver.sequence_number ?? undefined,
-            };
+            })
+          );
+          return;
+        }
 
-            await connectionManager.broadcastToConversation(conversationId, {
-              type: 'message',
-              data: { message: messageResponse },
-            });
+        await db
+          .update(conversations)
+          .set({ updated_at: new Date() })
+          .where(eq(conversations.id, conversationId));
+
+        for (const messageToDeliver of messagesToDeliver) {
+          const messageTempId = connectionManager.getTempIdForMessage(
+            messageToDeliver.id,
+            conversationId
+          );
+
+          const messageResponse: MessageResponse = {
+            id: messageToDeliver.id,
+            content: messageToDeliver.content,
+            status: messageToDeliver.status as 'sending' | 'sent' | 'delivered' | 'read' | 'failed',
+            sender_id: messageToDeliver.sender_id,
+            conversation_id: messageToDeliver.conversation_id,
+            created_at: messageToDeliver.created_at,
+            updated_at: messageToDeliver.updated_at,
+            sender: {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              profile_picture_url: user.profile_picture_url ?? null,
+            },
+            tempId: messageTempId,
+            sequence_number: messageToDeliver.sequence_number ?? undefined,
+          };
+
+          await connectionManager.broadcastToConversation(conversationId, {
+            type: 'message',
+            data: { message: messageResponse },
+          });
+
+          if (messageTempId) {
+            connectionManager.removeTempIdMapping(messageTempId);
           }
         }
       } catch (error) {
@@ -290,7 +350,6 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
         return;
       }
 
-      // Check if user is participant in conversation
       const isParticipant = await isUserInConversation(user.id, data.conversationId);
       if (!isParticipant) {
         socket.send(
@@ -351,7 +410,6 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
           return;
         }
 
-        // Update message status to delivered
         await db
           .update(messages)
           .set({ status: 'delivered', updated_at: new Date() })
@@ -450,23 +508,18 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
 }
 
 export async function websocketRoutes(fastify: FastifyInstance): Promise<void> {
-  // WebSocket endpoint
   fastify.get('/ws', { websocket: true }, async (socket, request) => {
     try {
-      // Authenticate the WebSocket connection
       const user = await authenticateWebSocket(request);
 
-      // Create connection object
       const wsConnection: WebSocketConnection = {
         socket,
         user,
         conversationIds: new Set(),
       };
 
-      // Add to connection manager
       connectionManager.addConnection(wsConnection);
 
-      // Send welcome message
       socket.send(
         JSON.stringify({
           type: 'connected',
@@ -474,7 +527,6 @@ export async function websocketRoutes(fastify: FastifyInstance): Promise<void> {
         })
       );
 
-      // Handle incoming messages
       socket.on('message', async (data: Buffer) => {
         try {
           const message: WebSocketMessage = JSON.parse(data.toString());
@@ -489,12 +541,10 @@ export async function websocketRoutes(fastify: FastifyInstance): Promise<void> {
         }
       });
 
-      // Handle connection close
       socket.on('close', () => {
         connectionManager.removeConnection(wsConnection);
       });
 
-      // Handle errors
       socket.on('error', (error: Error) => {
         console.error('WebSocket error:', error);
         connectionManager.removeConnection(wsConnection);
@@ -506,5 +556,4 @@ export async function websocketRoutes(fastify: FastifyInstance): Promise<void> {
   });
 }
 
-// Export connection manager for use in other routes
 export { connectionManager };

@@ -10,7 +10,6 @@ import {
   type UserResponse,
 } from '@/schemas/conversation';
 
-// Helper function to format user response
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 function formatUserResponse(user: any): UserResponse {
   return {
@@ -23,7 +22,6 @@ function formatUserResponse(user: any): UserResponse {
   };
 }
 
-// Helper function to format message response
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 function formatMessageResponse(message: any, sender: any): MessageResponse {
   return {
@@ -39,7 +37,6 @@ function formatMessageResponse(message: any, sender: any): MessageResponse {
 }
 
 export async function conversationRoutes(fastify: FastifyInstance): Promise<void> {
-  // Add auth middleware to all routes
   fastify.addHook('preHandler', authMiddleware);
   fastify.get('/', {
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -58,9 +55,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           .from(users)
           .where(sql`${users.id} != ${userId}`);
 
-        // For each other user, check if conversation exists, if not create one
         for (const otherUser of otherUsers) {
-          // Check if conversation already exists between current user and this other user
           const existingConversation = await db
             .select({ id: conversations.id })
             .from(conversations)
@@ -79,7 +74,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
             )
             .limit(1);
 
-          // If no conversation exists, create one
           if (existingConversation.length === 0) {
             const [newConversation] = await db
               .insert(conversations)
@@ -90,7 +84,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
               .returning();
 
             if (newConversation) {
-              // Add both users as participants
               await db.insert(conversationParticipants).values([
                 {
                   conversation_id: newConversation.id,
@@ -105,7 +98,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           }
         }
 
-        // Now get all conversations where user is a participant
         const userConversations = await db
           .select({
             id: conversations.id,
@@ -122,11 +114,9 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           .where(eq(conversationParticipants.user_id, userId))
           .orderBy(desc(conversations.updated_at));
 
-        // Get participants and last message for each conversation
         const conversationsWithDetails: ConversationResponse[] = [];
 
         for (const conversation of userConversations) {
-          // Get participants
           const participants = await db
             .select({
               id: users.id,
@@ -140,7 +130,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
             .innerJoin(conversationParticipants, eq(users.id, conversationParticipants.user_id))
             .where(eq(conversationParticipants.conversation_id, conversation.id));
 
-          // Get last message
           const [lastMessageData] = await db
             .select({
               message: {
@@ -167,7 +156,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
             .orderBy(desc(messages.created_at))
             .limit(1);
 
-          // Count unread messages (for now, we'll set to 0 as read status tracking is complex)
           const unreadCount = 0;
 
           conversationsWithDetails.push({
@@ -197,7 +185,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
     },
   });
 
-  // GET /api/conversations/:id/messages - Fetch messages for a conversation
   fastify.get('/:id/messages', {
     handler: async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
       try {
@@ -215,7 +202,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
 
         const { limit, before } = data as GetMessagesQuery;
 
-        // Check if user is participant in conversation
         const [participation] = await db
           .select()
           .from(conversationParticipants)
@@ -234,13 +220,11 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           });
         }
 
-        // Build query conditions
         const baseCondition = eq(messages.conversation_id, conversationId);
         const whereConditions = before
           ? and(baseCondition, lt(messages.id, before))
           : baseCondition;
 
-        // Get messages with sender info
         const messagesData = await db
           .select({
             message: {
@@ -265,7 +249,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           .innerJoin(users, eq(messages.sender_id, users.id))
           .where(whereConditions)
           .orderBy(desc(messages.created_at))
-          .limit(limit + 1); // Get one extra to check if there are more
+          .limit(limit + 1);
 
         const hasMore = messagesData.length > limit;
         const messagesToReturn = hasMore ? messagesData.slice(0, limit) : messagesData;
@@ -276,7 +260,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
 
         return reply.send({
           success: true,
-          data: formattedMessages.reverse(), // Reverse to show oldest first
+          data: formattedMessages.reverse(),
           hasMore,
         });
       } catch (error) {

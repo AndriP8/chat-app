@@ -10,8 +10,9 @@ export const sendMessageSchema = z.object({
   content: z.string().min(1).max(5000, 'Message content too long'),
   tempId: z.string().min(1, 'Temporary ID is required'),
   sequenceNumber: z.number().int().positive().optional(),
+  createdAt: z.string().datetime().optional(),
 });
-// Response schemas
+
 export const userResponseSchema = z.object({
   id: z.string(),
   email: z.string(),
@@ -44,7 +45,6 @@ export const conversationResponseSchema = z.object({
   last_message: messageResponseSchema.nullable(),
 });
 
-// Type exports
 export type GetMessagesQuery = z.infer<typeof getMessagesSchema>;
 export type UserResponse = z.infer<typeof userResponseSchema>;
 export type MessageResponse = z.infer<typeof messageResponseSchema>;

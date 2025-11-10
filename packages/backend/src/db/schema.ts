@@ -1,7 +1,16 @@
-import { pgTable, uuid, varchar, text, timestamp, index, primaryKey, integer } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  index,
+  uniqueIndex,
+  primaryKey,
+  integer,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-// Users table
 export const users = pgTable(
   'users',
   {
@@ -18,7 +27,6 @@ export const users = pgTable(
   })
 );
 
-// Conversations table
 export const conversations = pgTable(
   'conversations',
   {
@@ -36,7 +44,6 @@ export const conversations = pgTable(
   })
 );
 
-// Conversation participants table
 export const conversationParticipants = pgTable(
   'conversation_participants',
   {
@@ -54,7 +61,6 @@ export const conversationParticipants = pgTable(
   })
 );
 
-// Messages table
 export const messages = pgTable(
   'messages',
   {
@@ -76,11 +82,19 @@ export const messages = pgTable(
     sender_idx: index('message_sender_idx').on(table.sender_id),
     created_at_idx: index('message_created_at_idx').on(table.created_at),
     status_idx: index('message_status_idx').on(table.status),
-    ordering_idx: index('message_ordering_idx').on(table.conversation_id, table.sender_id, table.sequence_number),
+    ordering_idx: index('message_ordering_idx').on(
+      table.conversation_id,
+      table.sender_id,
+      table.sequence_number
+    ),
+    unique_sequence_idx: uniqueIndex('message_unique_sequence_idx').on(
+      table.conversation_id,
+      table.sender_id,
+      table.sequence_number
+    ),
   })
 );
 
-// Relations
 export const usersRelations = relations(users, ({ many }) => ({
   conversation_participants: many(conversationParticipants),
   messages: many(messages),
@@ -118,7 +132,6 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-// Export types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Conversation = typeof conversations.$inferSelect;

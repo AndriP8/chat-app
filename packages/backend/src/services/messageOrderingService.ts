@@ -1,4 +1,6 @@
 import type { Message } from '@/db/schema';
+import { db, messages } from '@/db';
+import { and, desc, eq, lt } from 'drizzle-orm';
 
 interface BufferedMessage {
   message: Message;
@@ -17,8 +19,8 @@ interface OrderingConfig {
 }
 
 const DEFAULT_CONFIG: OrderingConfig = {
-  gapTimeoutMs: 5000, // 5 seconds to wait for missing messages
-  maxBufferSize: 100, // Max buffered messages per sender
+  gapTimeoutMs: 5000,
+  maxBufferSize: 100,
 };
 
 export class MessageOrderingService {
@@ -41,9 +43,8 @@ export class MessageOrderingService {
     const senderId = message.sender_id;
     const sequenceNumber = message.sequence_number;
 
-    const senderState = this.getOrCreateSenderState(conversationId, senderId);
+    const senderState = await this.getOrCreateSenderState(conversationId, senderId, sequenceNumber);
 
-    // Check if this is the expected message
     if (sequenceNumber === senderState.expectedSequence) {
       const deliverableMessages: Message[] = [message];
       senderState.expectedSequence++;
@@ -53,7 +54,6 @@ export class MessageOrderingService {
         senderState.gapTimer = null;
       }
 
-      // Check buffer for consecutive messages
       while (senderState.buffer.has(senderState.expectedSequence)) {
         const buffered = senderState.buffer.get(senderState.expectedSequence)!;
         deliverableMessages.push(buffered.message);
@@ -61,7 +61,6 @@ export class MessageOrderingService {
         senderState.expectedSequence++;
       }
 
-      // If buffer is now empty, no need for gap timer
       if (senderState.buffer.size === 0 && senderState.gapTimer) {
         clearTimeout(senderState.gapTimer);
         senderState.gapTimer = null;
@@ -70,34 +69,26 @@ export class MessageOrderingService {
       return deliverableMessages;
     }
     if (sequenceNumber > senderState.expectedSequence) {
-      // Check buffer size limit
       if (senderState.buffer.size >= this.config.maxBufferSize) {
         return this.forceDelivery(conversationId, senderId);
       }
 
-      // Add to buffer
       senderState.buffer.set(sequenceNumber, {
         message,
         timestamp: new Date(),
       });
 
-      // Start gap timer if not already running
       if (!senderState.gapTimer) {
         senderState.gapTimer = setTimeout(() => {
           this.forceDelivery(conversationId, senderId);
         }, this.config.gapTimeoutMs);
       }
 
-      // Return empty array - message is buffered
       return [];
     }
     return [];
   }
 
-  /**
-   * Force delivery of all buffered messages for a sender
-   * Used when gap timeout is reached or buffer is full
-   */
   private forceDelivery(conversationId: string, senderId: string): Message[] {
     const conversationStates = this.senderStates.get(conversationId);
     if (!conversationStates) return [];
@@ -110,12 +101,10 @@ export class MessageOrderingService {
       senderState.gapTimer = null;
     }
 
-    // Get all buffered messages sorted by sequence number
     const bufferedMessages = Array.from(senderState.buffer.entries())
       .sort(([seqA], [seqB]) => seqA - seqB)
       .map(([_seq, buffered]) => buffered.message);
 
-    // Update expected sequence to the highest sequence + 1
     if (bufferedMessages.length > 0) {
       const lastMessage = bufferedMessages[bufferedMessages.length - 1];
       if (lastMessage) {
@@ -123,16 +112,16 @@ export class MessageOrderingService {
       }
     }
 
-    // Clear buffer
     senderState.buffer.clear();
 
     return bufferedMessages;
   }
 
-  /**
-   * Get or create sender state
-   */
-  private getOrCreateSenderState(conversationId: string, senderId: string): SenderState {
+  private async getOrCreateSenderState(
+    conversationId: string,
+    senderId: string,
+    currentSequenceNumber: number
+  ): Promise<SenderState> {
     if (!this.senderStates.has(conversationId)) {
       this.senderStates.set(conversationId, new Map());
     }
@@ -140,16 +129,39 @@ export class MessageOrderingService {
     const conversationStates = this.senderStates.get(conversationId)!;
 
     if (!conversationStates.has(senderId)) {
-      conversationStates.set(senderId, {
-        expectedSequence: 1, // Start from 1
-        buffer: new Map(),
-        gapTimer: null,
-      });
+      try {
+        const lastMessage = await db
+          .select({ sequence_number: messages.sequence_number })
+          .from(messages)
+          .where(
+            and(
+              eq(messages.conversation_id, conversationId),
+              eq(messages.sender_id, senderId),
+              lt(messages.sequence_number, currentSequenceNumber)
+            )
+          )
+          .orderBy(desc(messages.sequence_number))
+          .limit(1);
+
+        const expectedSequence = lastMessage[0]?.sequence_number
+          ? lastMessage[0].sequence_number + 1
+          : 1;
+
+        conversationStates.set(senderId, {
+          expectedSequence,
+          buffer: new Map(),
+          gapTimer: null,
+        });
+      } catch (error) {
+        console.error(
+          `[MessageOrdering] Error initializing sender state for ${senderId} in conversation ${conversationId}:`,
+          error
+        );
+      }
     }
 
     return conversationStates.get(senderId)!;
   }
 }
 
-// Export singleton instance
 export const messageOrderingService = new MessageOrderingService();
