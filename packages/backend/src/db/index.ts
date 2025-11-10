@@ -1,19 +1,19 @@
-import "dotenv/config";
-import { drizzle } from "drizzle-orm/neon-http";
-import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
-import { neon } from "@neondatabase/serverless";
-import { Pool } from "pg";
-import * as schema from "./schema";
-import { envConfig } from "@/config/env";
+import 'dotenv/config';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { drizzle as drizzleNode } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import { envConfig } from '@/config/env';
+import * as schema from './schema';
 
 const DATABASE_URL = envConfig.DATABASE_URL;
 
 if (!DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is required");
+  throw new Error('DATABASE_URL environment variable is required');
 }
 
 // Check if we're using Neon (production) or local PostgreSQL (development)
-const isNeonDatabase = DATABASE_URL.includes("neon.tech");
+const isNeonDatabase = DATABASE_URL.includes('neon.tech');
 
 let db: ReturnType<typeof drizzle> | ReturnType<typeof drizzleNode>;
 
@@ -30,4 +30,4 @@ if (isNeonDatabase) {
 }
 
 export { db };
-export * from "./schema";
+export * from './schema';

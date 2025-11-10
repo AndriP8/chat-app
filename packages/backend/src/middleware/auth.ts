@@ -1,8 +1,8 @@
-import type { FastifyRequest, FastifyReply } from "fastify";
-import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
-import { db, users } from "@/db";
-import { envConfig } from "@/config/env";
+import { eq } from 'drizzle-orm';
+import type { FastifyReply, FastifyRequest } from 'fastify';
+import jwt from 'jsonwebtoken';
+import { envConfig } from '@/config/env';
+import { db, users } from '@/db';
 
 interface JWTPayload {
   user_id: string;
@@ -10,7 +10,7 @@ interface JWTPayload {
 }
 
 // Extend FastifyRequest to include user property
-declare module "fastify" {
+declare module 'fastify' {
   interface FastifyRequest {
     user?: {
       id: string;
@@ -23,26 +23,23 @@ declare module "fastify" {
 
 const JWT_SECRET = envConfig.JWT_SECRET;
 const COOKIE_CONFIG = {
-  AUTH_TOKEN: "auth_token",
+  AUTH_TOKEN: 'auth_token',
 };
 
 function verifyToken(token: string): JWTPayload {
   return jwt.verify(token, JWT_SECRET) as JWTPayload;
 }
 
-export async function authMiddleware(
-  request: FastifyRequest,
-  reply: FastifyReply
-): Promise<void> {
+export async function authMiddleware(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   try {
     // Get token from cookie
     const token = request.cookies?.[COOKIE_CONFIG.AUTH_TOKEN];
-    
+
     if (!token) {
       return reply.status(401).send({
         success: false,
-        error: "Authorization token required",
-        code: "NO_TOKEN",
+        error: 'Authorization token required',
+        code: 'NO_TOKEN',
       });
     }
 
@@ -65,8 +62,8 @@ export async function authMiddleware(
     if (!user) {
       return reply.status(401).send({
         success: false,
-        error: "Invalid token - user not found",
-        code: "INVALID_TOKEN",
+        error: 'Invalid token - user not found',
+        code: 'INVALID_TOKEN',
       });
     }
 
@@ -74,11 +71,11 @@ export async function authMiddleware(
     request.user = user;
     return;
   } catch (error) {
-    console.error("Auth middleware error:", error);
+    console.error('Auth middleware error:', error);
     return reply.status(401).send({
       success: false,
-      error: "Invalid or expired token",
-      code: "INVALID_TOKEN",
+      error: 'Invalid or expired token',
+      code: 'INVALID_TOKEN',
     });
   }
 }

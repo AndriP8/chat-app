@@ -1,25 +1,25 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { db, users, type User } from "@/db";
-import { registerSchema, loginSchema, type UserResponse } from "@/schemas/auth";
-import { envConfig } from "@/config/env";
+import bcrypt from 'bcryptjs';
+import { eq } from 'drizzle-orm';
+import type { FastifyInstance } from 'fastify';
+import jwt from 'jsonwebtoken';
+import { envConfig } from '@/config/env';
+import { db, type User, users } from '@/db';
+import { loginSchema, registerSchema, type UserResponse } from '@/schemas/auth';
 
 // JWT utilities
 const JWT_SECRET = envConfig.JWT_SECRET;
-const BCRYPT_ROUNDS = Number.parseInt(envConfig.BCRYPT_ROUNDS || "12");
+const BCRYPT_ROUNDS = Number.parseInt(envConfig.BCRYPT_ROUNDS || '12', 10);
 
 // Cookie configuration
 const COOKIE_CONFIG = {
-  AUTH_TOKEN: "auth_token",
-  REFRESH_TOKEN: "refresh_token",
+  AUTH_TOKEN: 'auth_token',
+  REFRESH_TOKEN: 'refresh_token',
   OPTIONS: {
     httpOnly: true,
-    secure: envConfig.NODE_ENV === "production",
-    sameSite: "strict" as const,
+    secure: envConfig.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-    path: "/",
+    path: '/',
   },
 };
 
@@ -29,7 +29,7 @@ interface JWTPayload {
 }
 
 function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 }
 
 function verifyToken(token: string): JWTPayload {
@@ -49,29 +49,25 @@ function formatUserResponse(user: User): UserResponse {
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   // Register endpoint
-  fastify.post("/register", {
+  fastify.post('/register', {
     handler: async (request, reply) => {
       try {
         const { success, data, error } = registerSchema.safeParse(request.body);
         if (!success) {
           return reply.status(400).send({
             success: false,
-            error: "Validation failed",
+            error: 'Validation failed',
             details: error.flatten().fieldErrors,
           });
         }
         const { email, password, name, profilePictureUrl } = data;
 
-        const [existingUser] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+        const [existingUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
         if (existingUser) {
           return reply.status(409).send({
             success: false,
-            error: "User with this email already exists",
+            error: 'User with this email already exists',
           });
         }
 
@@ -91,7 +87,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         if (!newUser) {
           return reply.status(500).send({
             success: false,
-            error: "Failed to create user",
+            error: 'Failed to create user',
           });
         }
 
@@ -111,50 +107,43 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           data: response,
         });
       } catch (error) {
-        console.error("Registration error:", error);
+        console.error('Registration error:', error);
         return reply.status(500).send({
           success: false,
-          error: "Registration failed",
+          error: 'Registration failed',
         });
       }
     },
   });
 
   // Login endpoint
-  fastify.post("/login", {
+  fastify.post('/login', {
     handler: async (request, reply) => {
       try {
         const { success, data, error } = loginSchema.safeParse(request.body);
         if (!success) {
           return reply.status(400).send({
             success: false,
-            error: "Validation failed",
+            error: 'Validation failed',
             details: error.flatten().fieldErrors,
           });
         }
         const { email, password } = data;
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+        const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
         if (!user) {
           return reply.status(401).send({
             success: false,
-            error: "Invalid email or password",
+            error: 'Invalid email or password',
           });
         }
 
-        const isPasswordValid = await bcrypt.compare(
-          password,
-          user.password_hash,
-        );
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
         if (!isPasswordValid) {
           return reply.status(401).send({
             success: false,
-            error: "Invalid email or password",
+            error: 'Invalid email or password',
           });
         }
 
@@ -170,40 +159,36 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           success: true,
           data: response,
         });
-      } catch (error) {
+      } catch (_error) {
         return reply.status(500).send({
           success: false,
-          error: "Login failed",
+          error: 'Login failed',
         });
       }
     },
   });
 
   // Get current user endpoint
-  fastify.get("/me", {
+  fastify.get('/me', {
     handler: async (request, reply) => {
       try {
         const token = request.cookies?.[COOKIE_CONFIG.AUTH_TOKEN];
         if (!token) {
           return reply.status(401).send({
             success: false,
-            error: "Authorization token required",
+            error: 'Authorization token required',
           });
         }
 
         const payload = verifyToken(token);
         const userId = payload.user_id;
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1);
+        const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 
         if (!user) {
           return reply.status(404).send({
             success: false,
-            error: "User not found",
+            error: 'User not found',
           });
         }
 
@@ -212,18 +197,18 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           data: { user: formatUserResponse(user) },
         });
       } catch (error) {
-        console.error("Get user error:", error);
+        console.error('Get user error:', error);
         return reply.status(500).send({
           success: false,
-          error: "Failed to get user information",
+          error: 'Failed to get user information',
         });
       }
     },
   });
 
   // Logout endpoint
-  fastify.post("/logout", {
-    handler: async (request, reply) => {
+  fastify.post('/logout', {
+    handler: async (_request, reply) => {
       // Clear the authentication cookie
       reply.clearCookie(COOKIE_CONFIG.AUTH_TOKEN, {
         path: COOKIE_CONFIG.OPTIONS.path,
@@ -231,7 +216,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
       return reply.send({
         success: true,
-        message: "Logged out successfully",
+        message: 'Logged out successfully',
       });
     },
   });

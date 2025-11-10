@@ -1,12 +1,12 @@
 import 'dotenv/config';
-import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import cookie from '@fastify/cookie';
+import Fastify from 'fastify';
 import { envConfig } from '@/config/env';
-import { healthRoutes } from '@/routes/health';
 import { authRoutes } from '@/routes/auth';
 import { conversationRoutes } from '@/routes/conversations';
+import { healthRoutes } from '@/routes/health';
 import { websocketRoutes } from '@/routes/websocket';
 
 async function buildServer() {

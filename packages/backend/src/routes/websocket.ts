@@ -1,17 +1,17 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { WebSocket } from '@fastify/websocket';
+import { and, eq } from 'drizzle-orm';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import jwt from 'jsonwebtoken';
-import { eq, and } from 'drizzle-orm';
+import { envConfig } from '@/config/env';
 import {
-  db,
-  users,
-  conversations,
   conversationParticipants,
+  conversations,
+  db,
   messages,
   type NewMessage,
+  users,
 } from '@/db';
-import { envConfig } from '@/config/env';
-import { sendMessageSchema, type MessageResponse } from '@/schemas/conversation';
+import { type MessageResponse, sendMessageSchema } from '@/schemas/conversation';
 import { messageOrderingService } from '@/services/messageOrderingService';
 
 interface JWTPayload {
@@ -531,7 +531,7 @@ export async function websocketRoutes(fastify: FastifyInstance): Promise<void> {
         try {
           const message: WebSocketMessage = JSON.parse(data.toString());
           await handleWebSocketMessage(wsConnection, message);
-        } catch (error) {
+        } catch (_error) {
           socket.send(
             JSON.stringify({
               type: 'error',

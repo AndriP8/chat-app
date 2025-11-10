@@ -1,6 +1,6 @@
-import type { Message } from '@/db/schema';
-import { db, messages } from '@/db';
 import { and, desc, eq, lt } from 'drizzle-orm';
+import { db, messages } from '@/db';
+import type { Message } from '@/db/schema';
 
 interface BufferedMessage {
   message: Message;

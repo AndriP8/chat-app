@@ -20,12 +20,6 @@
       },
       "suspicious": {
         "noExplicitAny": "warn"
-      },
-      "nursery": {
-        "useSortedClasses": {
-          "fix": "safe",
-          "level": "warn"
-        }
       }
     }
   },
@@ -50,12 +44,6 @@
     }
   },
   "files": {
-    "includes": [
-      "packages/backend/**",
-      "packages/frontend/**",
-      "!**/node_modules",
-      "!**/dist",
-      "!**/build"
-    ]
+    "ignoreUnknown": false
   }
 }

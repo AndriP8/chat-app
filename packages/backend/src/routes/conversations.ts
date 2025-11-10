@@ -1,10 +1,8 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and, desc, lt, sql } from 'drizzle-orm';
-import { db, users, conversations, conversationParticipants, messages } from '@/db';
+import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { conversationParticipants, conversations, db, messages, users } from '@/db';
 import { authMiddleware } from '@/middleware/auth';
 import {
-  getMessagesSchema,
-  type GetMessagesQuery,
   type ConversationResponse,
   type MessageResponse,
   type UserResponse,
@@ -155,8 +153,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
             .where(eq(messages.conversation_id, conversation.id))
             .orderBy(desc(messages.created_at))
             .limit(1);
-
-          const unreadCount = 0;
 
           conversationsWithDetails.push({
             id: conversation.id,

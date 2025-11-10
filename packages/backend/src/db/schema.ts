@@ -1,15 +1,15 @@
+import { relations } from 'drizzle-orm';
 import {
+  index,
+  integer,
   pgTable,
-  uuid,
-  varchar,
+  primaryKey,
   text,
   timestamp,
-  index,
   uniqueIndex,
-  primaryKey,
-  integer,
+  uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
 
 export const users = pgTable(
   'users',

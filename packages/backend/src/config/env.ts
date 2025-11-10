@@ -1,7 +1,7 @@
 export interface EnvConfig {
   PORT: string;
   HOST: string;
-  NODE_ENV: "development" | "production" | "test";
+  NODE_ENV: 'development' | 'production' | 'test';
   DATABASE_URL: string;
   CORS_ORIGIN: string;
   JWT_SECRET: string;
@@ -9,27 +9,23 @@ export interface EnvConfig {
   BCRYPT_ROUNDS: string;
 }
 
-const REQUIRED_ENV_VARS = ["DATABASE_URL", "JWT_SECRET"] as const;
+const REQUIRED_ENV_VARS = ['DATABASE_URL', 'JWT_SECRET'] as const;
 
 export function getEnvConfig(): EnvConfig {
-  const missingVars = REQUIRED_ENV_VARS.filter(
-    (varName) => !process.env[varName],
-  );
+  const missingVars = REQUIRED_ENV_VARS.filter((varName) => !process.env[varName]);
 
   if (missingVars.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missingVars.join(
-        ", ",
-      )}\nPlease check your .env file or environment configuration.`,
+        ', '
+      )}\nPlease check your .env file or environment configuration.`
     );
   }
 
   // Validate NODE_ENV if provided
-  const nodeEnv = process.env.NODE_ENV as EnvConfig["NODE_ENV"];
-  if (!["development", "production", "test"].includes(nodeEnv)) {
-    throw new Error(
-      `Invalid NODE_ENV: ${nodeEnv}. Must be one of: development, production, test`,
-    );
+  const nodeEnv = process.env.NODE_ENV as EnvConfig['NODE_ENV'];
+  if (!['development', 'production', 'test'].includes(nodeEnv)) {
+    throw new Error(`Invalid NODE_ENV: ${nodeEnv}. Must be one of: development, production, test`);
   }
 
   return {
