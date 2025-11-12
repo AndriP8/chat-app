@@ -1,5 +1,5 @@
+import { AlertCircle, Check, CheckCheck, Clock, RotateCcw } from 'lucide-react';
 import type { UIMessage } from '@/types/chat';
-import { Check, CheckCheck, AlertCircle, Clock, RotateCcw } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: UIMessage;
@@ -17,7 +17,7 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
     if (!isOwn) return null;
     switch (message.status) {
       case 'sending':
-        return <Clock size={12} className="text-gray-400 animate-pulse" />;
+        return <Clock size={12} className="animate-pulse text-gray-400" />;
       case 'sent':
         return <Check size={12} className="text-gray-500" />;
       case 'delivered':
@@ -38,39 +38,39 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
     }
   };
   return (
-    <div className={`flex gap-3 mb-4 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`mb-4 flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar or placeholder for alignment */}
       {!isOwn && (
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {showAvatar ? (
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
+            <div className="h-8 w-8 overflow-hidden rounded-full bg-gray-200 ">
               {message.sender.profile_picture_url || message.sender.profile_picture_url ? (
                 <img
                   src={message.sender.profile_picture_url || message.sender.profile_picture_url}
                   alt={message.sender.name || message.sender.name}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-sm font-medium">
+                <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-gray-400 to-gray-600 font-medium text-sm text-white">
                   {message.sender.name.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
           ) : (
             // Invisible placeholder to maintain alignment
-            <div className="w-8 h-8" />
+            <div className="h-8 w-8" />
           )}
         </div>
       )}
 
       {/* Message Content */}
-      <div className={`flex flex-col max-w-xs lg:max-w-md ${isOwn ? 'items-end' : 'items-start'}`}>
+      <div className={`flex max-w-xs flex-col lg:max-w-md ${isOwn ? 'items-end' : 'items-start'}`}>
         {/* Message bubble */}
         <div
-          className={`px-4 py-2 rounded-2xl wrap-anywhere ${
+          className={`wrap-anywhere rounded-2xl px-4 py-2 ${
             isOwn
-              ? 'bg-blue-500 text-white rounded-br-md'
-              : 'bg-gray-100 text-gray-900 rounded-bl-md'
+              ? 'rounded-br-md bg-blue-500 text-white'
+              : 'rounded-bl-md bg-gray-100 text-gray-900'
           } ${message.status === 'failed' ? 'border border-red-200' : ''}`}
         >
           <p className="text-sm leading-relaxed">{message.content}</p>
@@ -78,9 +78,9 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
 
         {/* Message metadata */}
         <div
-          className={`flex items-center gap-1 mt-1 px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+          className={`mt-1 flex items-center gap-1 px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
         >
-          <span className="text-xs text-gray-500">{formatMessageTime(message.created_at)}</span>
+          <span className="text-gray-500 text-xs">{formatMessageTime(message.created_at)}</span>
           {renderStatusIcon()}
         </div>
       </div>

@@ -5,6 +5,12 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "nursery": {
+        "useSortedClasses": {
+          "fix": "safe",
+          "level": "warn"
+        }
+      },
       "style": {
         "noNonNullAssertion": "off",
         "noParameterAssign": "error",

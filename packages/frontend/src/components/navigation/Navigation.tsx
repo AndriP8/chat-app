@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { conversationApi, webSocketService } from '@/services';
 import { useAuth } from '../auth/AuthContext';
 
 export function Navigation() {
@@ -8,22 +9,22 @@ export function Navigation() {
   const navItems = [{ path: '/chat', label: 'Chat' }];
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+    <nav className="sticky top-0 z-10 border-gray-200 border-b bg-white shadow-sm">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 justify-between">
           <div className="flex">
             <div className="flex space-x-8">
               <div className="flex items-center">
-                <h1 className="text-xl font-semibold text-gray-900">Chat App</h1>
+                <h1 className="font-semibold text-gray-900 text-xl">Chat App</h1>
               </div>
               {navItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  className={`inline-flex items-center border-b-2 px-1 pt-1 font-medium text-sm ${
                     location.pathname === item.path
                       ? 'border-blue-500 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                   }`}
                 >
                   {item.label}
@@ -34,7 +35,7 @@ export function Navigation() {
           <button
             onClick={logout}
             type="button"
-            className="inline-flex cursor-pointer items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            className="inline-flex cursor-pointer items-center px-1 pt-1 font-medium text-gray-500 text-sm hover:border-gray-300 hover:text-gray-700"
           >
             Logout
           </button>

@@ -78,7 +78,7 @@ export const secureStorage = {
       console.warn(`Failed to check if key "${key}" exists in localStorage:`, error);
       return false;
     }
-  }
+  },
 };
 
 /**
@@ -122,11 +122,11 @@ export function ensureDate(date: Date | string | number | undefined | null): Dat
   if (!date) {
     return new Date();
   }
-  
+
   if (date instanceof Date) {
     return date;
   }
-  
+
   try {
     return new Date(date);
   } catch (error) {
@@ -136,48 +136,48 @@ export function ensureDate(date: Date | string | number | undefined | null): Dat
 }
 
 /**
-  * Format a date for message timestamps
-  * @param date - The date to format
-  * @returns Formatted time string (e.g., "2:30 PM", "Yesterday", "Jan 15")
-  */
+ * Format a date for message timestamps
+ * @param date - The date to format
+ * @returns Formatted time string (e.g., "2:30 PM", "Yesterday", "Jan 15")
+ */
 export const formatMessageTime = (date: Date): string => {
   const now = new Date();
   const messageDate = new Date(date);
-  
+
   // Check if it's today
   const isToday = now.toDateString() === messageDate.toDateString();
-  
+
   if (isToday) {
     return messageDate.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
     });
   }
-  
+
   // Check if it's yesterday
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday = yesterday.toDateString() === messageDate.toDateString();
-  
+
   if (isYesterday) {
     return 'Yesterday';
   }
-  
+
   // Check if it's within the current year
   const isCurrentYear = now.getFullYear() === messageDate.getFullYear();
-  
+
   if (isCurrentYear) {
     return messageDate.toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
-  
+
   // For older dates, include the year
   return messageDate.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   });
 };

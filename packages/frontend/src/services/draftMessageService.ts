@@ -1,5 +1,5 @@
-import { dbOps } from './databaseOperations';
 import type { DraftMessage } from '../types/database';
+import { dbOps } from './databaseOperations';
 
 export class DraftMessageService {
   private saveTimeouts = new Map<string, number>();

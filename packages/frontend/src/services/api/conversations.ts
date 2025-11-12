@@ -1,10 +1,10 @@
-import { makeRequest } from './base';
 import type {
-  Message,
-  GetMessagesQuery,
   ConversationsResponse,
+  GetMessagesQuery,
+  Message,
   MessagesResponse,
 } from '@/types/chat';
+import { makeRequest } from './base';
 
 export const conversationApi = {
   // Get all conversations for the current user

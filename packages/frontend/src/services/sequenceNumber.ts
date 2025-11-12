@@ -2,7 +2,7 @@ import { db } from './database';
 
 export async function getNextSequenceNumber(
   conversationId: string,
-  userId: string,
+  userId: string
 ): Promise<number> {
   try {
     return await db.transaction('rw', db.sequence_counters, async () => {

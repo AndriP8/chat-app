@@ -1,11 +1,6 @@
-import {
-  registerSchema,
-  loginSchema,
-  type RegisterInput,
-  type LoginInput,
-} from "@/schemas/auth";
-import { makeRequest } from "./base";
-import type { AuthResponse, UserResponse, MessageResponse } from "./types/auth";
+import { type LoginInput, loginSchema, type RegisterInput, registerSchema } from '@/schemas/auth';
+import { makeRequest } from './base';
+import type { AuthResponse, MessageResponse, UserResponse } from './types/auth';
 
 /**
  * Authentication API endpoints
@@ -18,8 +13,8 @@ export const authApi = {
     // Validate input data
     const validatedData = registerSchema.parse(userData);
 
-    return makeRequest<AuthResponse>("/auth/register", {
-      method: "POST",
+    return makeRequest<AuthResponse>('/auth/register', {
+      method: 'POST',
       body: JSON.stringify(validatedData),
     });
   },
@@ -31,8 +26,8 @@ export const authApi = {
     // Validate input data
     const validatedData = loginSchema.parse(loginData);
 
-    return makeRequest<AuthResponse>("/auth/login", {
-      method: "POST",
+    return makeRequest<AuthResponse>('/auth/login', {
+      method: 'POST',
       body: JSON.stringify(validatedData),
     });
   },
@@ -41,15 +36,15 @@ export const authApi = {
    * Get current user information
    */
   async getCurrentUser(): Promise<UserResponse> {
-    return makeRequest<UserResponse>("/auth/me");
+    return makeRequest<UserResponse>('/auth/me');
   },
 
   /**
    * Logout user (optional - mainly for consistency)
    */
   async logout(): Promise<MessageResponse> {
-    return makeRequest<MessageResponse>("/auth/logout", {
-      method: "POST",
+    return makeRequest<MessageResponse>('/auth/logout', {
+      method: 'POST',
     });
   },
 };

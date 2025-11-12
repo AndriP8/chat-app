@@ -58,16 +58,16 @@ export const ChatSidebar = ({
   }, [roomsWithLatestMessages]);
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
+    <div className="flex h-full w-80 flex-col border-gray-200 border-r bg-white">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+      <div className="border-gray-200 border-b p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="font-semibold text-gray-900 text-xl">Messages</h1>
         </div>
       </div>
       {isLoading && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
         </div>
       )}
       {/* Chat List */}

@@ -1,34 +1,28 @@
-// API services
+export type {
+  Conversation,
+  ConversationParticipant,
+  DatabaseSchema,
+  DraftMessage,
+  Message,
+  SendMessageRequest,
+  User,
+} from '../types/database';
 export * from './api';
 export { default as api } from './api';
-
 // Database services
 export { db } from './database';
-export { dbOps, DatabaseOperations } from './databaseOperations';
-
+export { DatabaseOperations, dbOps } from './databaseOperations';
 // Message scheduling layer
-export { messageScheduler, MessageScheduler } from './messageScheduler';
-
-// WebSocket service layer
-export { webSocketService, WebSocketService } from './websocket';
+export { MessageScheduler, messageScheduler } from './messageScheduler';
 
 // Service management functions
 export {
-  initializeDataSync,
-  shutdownDataSync,
-  getDataSyncStatus,
   clearAllLocalData,
   type DataSyncConfig,
   type DataSyncStatus,
+  getDataSyncStatus,
+  initializeDataSync,
+  shutdownDataSync,
 } from './serviceManager';
-
-// Re-export database types for convenience
-export type {
-  User,
-  Conversation,
-  Message,
-  ConversationParticipant,
-  DraftMessage,
-  SendMessageRequest,
-  DatabaseSchema,
-} from '../types/database';
+// WebSocket service layer
+export { WebSocketService, webSocketService } from './websocket';

@@ -1,7 +1,7 @@
 import { SendHorizonal } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../auth/AuthContext';
+import { useEffect, useRef, useState } from 'react';
 import { draftMessageService } from '@/services/draftMessageService';
+import { useAuth } from '../auth/AuthContext';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => void;
@@ -86,7 +86,7 @@ export const MessageInput = ({
   };
 
   return (
-    <div className="p-4 bg-white border-t border-gray-200 sticky bottom-0">
+    <div className="sticky bottom-0 border-gray-200 border-t bg-white p-4">
       <form onSubmit={handleSubmit} className="flex items-center gap-3">
         {/* Message input */}
         <textarea
@@ -97,7 +97,7 @@ export const MessageInput = ({
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className="w-full field-sizing-content px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          className="field-sizing-content w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 pr-12 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
           style={{ minHeight: '48px', maxHeight: '420px' }}
         />
 
@@ -105,7 +105,7 @@ export const MessageInput = ({
         <button
           type="submit"
           disabled={!message.trim()}
-          className="shrink-0 p-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="shrink-0 rounded-full bg-blue-500 p-3 text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Send message"
         >
           <SendHorizonal size={18} />

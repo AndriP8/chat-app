@@ -1,4 +1,4 @@
-import type { ConversationsState, ConversationsAction } from '@/types/chat';
+import type { ConversationsAction, ConversationsState } from '@/types/chat';
 
 export const initialConversationsState: ConversationsState = {
   conversations: [],

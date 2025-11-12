@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import type { UIMessage } from '@/types/chat';
-import { MessageBubble } from './MessageBubble';
-import { useAuth } from '../auth/AuthContext';
 import { webSocketService } from '@/services/websocket';
+import type { UIMessage } from '@/types/chat';
+import { useAuth } from '../auth/AuthContext';
+import { MessageBubble } from './MessageBubble';
 
 interface MessageListProps {
   messages: UIMessage[];
@@ -27,9 +27,7 @@ export const MessageList = ({ messages, isLoading = false, conversationId }: Mes
     if (!conversationId || !currentUser || messages.length === 0) return;
 
     const unreadMessages = messages.filter(
-      (message) =>
-        message.sender_id !== currentUser.id &&
-        message.status !== 'read'
+      (message) => message.sender_id !== currentUser.id && message.status !== 'read'
     );
 
     // Mark each unread message as read
@@ -40,9 +38,9 @@ export const MessageList = ({ messages, isLoading = false, conversationId }: Mes
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div className="flex items-center gap-2 text-gray-500">
-          <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
           <span>Loading messages...</span>
         </div>
       </div>
@@ -51,16 +49,16 @@ export const MessageList = ({ messages, isLoading = false, conversationId }: Mes
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div className="text-center text-gray-500">
-          <p className="text-lg mb-2">No messages yet</p>
+          <p className="mb-2 text-lg">No messages yet</p>
           <p className="text-sm">Start the conversation by sending a message!</p>
         </div>
       </div>
     );
   }
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
+    <div ref={containerRef} className="flex-1 space-y-1 overflow-y-auto p-4">
       {messages.map((message, index) => {
         const isOwn = message.sender_id === currentUser?.id;
         const prevMessage = index > 0 ? messages[index - 1] : null;

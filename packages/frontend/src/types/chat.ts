@@ -1,4 +1,4 @@
-import type { User, Message as DatabaseMessage } from './database';
+import type { Message as DatabaseMessage, User } from './database';
 
 export interface Message extends DatabaseMessage {
   sender: User;

@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "biome lint src/",
-    "format": "biome format --write src/",
-    "type-check": "tsc --noEmit --skipLibCheck",
+    "format": "biome check --write src/",
+    "type-check": "tsc --build --force",
     "preview": "vite preview"
   },
   "dependencies": {

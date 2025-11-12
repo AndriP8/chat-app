@@ -1,18 +1,16 @@
-import { useState, useCallback, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { LoginForm } from "./LoginForm";
-import { RegisterForm } from "./RegisterForm";
-import { useAuth } from "./AuthContext";
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
+import { LoginForm } from './LoginForm';
+import { RegisterForm } from './RegisterForm';
 
-type AuthMode = "login" | "register";
+type AuthMode = 'login' | 'register';
 
 interface AuthPageProps {
   initialMode?: AuthMode;
 }
 
-export const AuthPage: React.FC<AuthPageProps> = ({
-  initialMode = "login",
-}) => {
+export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login' }) => {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
@@ -22,7 +20,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   // Redirect authenticated users who directly access auth pages
   useEffect(() => {
     if (isAuthenticated && !authState.isLoading) {
-      const from = (location.state as { from?: string })?.from || "/chat";
+      const from = (location.state as { from?: string })?.from || '/chat';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, authState.isLoading, navigate, location.state]);
@@ -30,7 +28,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const handleAuthSuccess = useCallback(() => {
     setIsRedirecting(true);
 
-    const from = (location.state as { from?: string })?.from || "/chat";
+    const from = (location.state as { from?: string })?.from || '/chat';
 
     setTimeout(() => {
       navigate(from, { replace: true });
@@ -38,33 +36,31 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   }, [navigate, location.state]);
 
   const switchToLogin = useCallback(() => {
-    setMode("login");
+    setMode('login');
   }, []);
 
   const switchToRegister = useCallback(() => {
-    setMode("register");
+    setMode('register');
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 p-4 dark:from-gray-900 dark:to-gray-800">
       {isRedirecting && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
             <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-              <p className="text-gray-900 dark:text-white font-medium">
-                Redirecting to chat...
-              </p>
+              <div className="h-6 w-6 animate-spin rounded-full border-blue-600 border-b-2" />
+              <p className="font-medium text-gray-900 dark:text-white">Redirecting to chat...</p>
             </div>
           </div>
         </div>
       )}
       <div className="w-full max-w-md">
         {/* Logo/Brand Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+        <div className="mb-8 text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-blue-600">
             <svg
-              className="w-8 h-8 text-white"
+              className="h-8 w-8 text-white"
               fill="none"
               stroke="currentColor"
               aria-label="Chat message icon"
@@ -79,40 +75,32 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            ChatApp
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <h1 className="shrink-0 font-bold text-3xl text-gray-900 dark:text-white">ChatApp</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Connect and chat with friends in real-time
           </p>
         </div>
 
         {/* Auth Forms */}
         <div className="transition-all duration-300 ease-in-out">
-          {mode === "login" ? (
-            <LoginForm
-              onSwitchToRegister={switchToRegister}
-              onLoginSuccess={handleAuthSuccess}
-            />
+          {mode === 'login' ? (
+            <LoginForm onSwitchToRegister={switchToRegister} onLoginSuccess={handleAuthSuccess} />
           ) : (
-            <RegisterForm
-              onSwitchToLogin={switchToLogin}
-              onRegisterSuccess={handleAuthSuccess}
-            />
+            <RegisterForm onSwitchToLogin={switchToLogin} onRegisterSuccess={handleAuthSuccess} />
           )}
         </div>
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            By continuing, you agree to our{" "}
+          <p className="text-gray-500 text-xs dark:text-gray-400">
+            By continuing, you agree to our{' '}
             <button
               type="button"
               className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
             >
               Terms of Service
-            </button>{" "}
-            and{" "}
+            </button>{' '}
+            and{' '}
             <button
               type="button"
               className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"

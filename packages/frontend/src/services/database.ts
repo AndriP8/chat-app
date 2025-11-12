@@ -1,13 +1,13 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type {
-  User,
   Conversation,
-  Message,
   ConversationParticipant,
+  DatabaseSchema,
   DraftMessage,
+  Message,
   SendMessageRequest,
   SequenceCounter,
-  DatabaseSchema,
+  User,
 } from '../types/database';
 
 class ChatDatabase extends Dexie {

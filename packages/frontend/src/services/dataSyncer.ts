@@ -1,12 +1,13 @@
+import type { ChatRoom, UIMessage } from '@/types/chat';
+import { ensureDate } from '@/utils/helpers';
+import type { Message, SendMessageRequest } from '../types/database';
+import conversationApi from './api/conversations';
+import { broadcastChannelService } from './broadcastChannel';
 import { dbOps } from './databaseOperations';
 import { messageScheduler } from './messageScheduler';
-import { broadcastChannelService } from './broadcastChannel';
+import { networkStatusService } from './networkStatus';
 import { getNextSequenceNumber } from './sequenceNumber';
-import type { Message, SendMessageRequest } from '../types/database';
 import type { WebSocketService } from './websocket';
-import conversationApi from './api/conversations';
-import type { UIMessage, ChatRoom } from '@/types/chat';
-import { ensureDate } from '@/utils/helpers';
 
 export interface SyncEvents {
   messageReceived: (message: Message) => void;
@@ -185,7 +186,7 @@ export class DataSyncer {
       if (update.status === 'sent' || update.status === 'delivered' || update.status === 'read') {
         try {
           await messageScheduler.cleanupProcessedMessage(update.messageId);
-        } catch (error) {
+        } catch (_error) {
           console.log(
             `Cleanup by message ID failed, this is normal for temp IDs: ${update.messageId}`
           );

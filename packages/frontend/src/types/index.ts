@@ -1,13 +1,12 @@
 export type {
-  User,
+  ChatRoom,
+  Message as ChatMessage,
+} from './chat';
+export type {
   Conversation,
   Message,
+  User,
 } from './database';
-
-export type {
-  Message as ChatMessage,
-  ChatRoom,
-} from './chat';
 
 // Validation types
 export interface ValidationError {

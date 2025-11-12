@@ -1,17 +1,17 @@
 import {
   createContext,
-  useContext,
-  useReducer,
-  useCallback,
-  useEffect,
   type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useReducer,
 } from 'react';
-import { authReducer, loadPersistedAuthState, type AuthState } from '@/reducers/authReducer';
-import type { User } from '@/types';
+import { type AuthState, authReducer, loadPersistedAuthState } from '@/reducers/authReducer';
 import type { LoginInput, RegisterInput } from '@/schemas/auth';
+import { clearAllLocalData, initializeDataSync, shutdownDataSync } from '@/services';
+import { ApiError, authApi } from '@/services/api';
+import type { User } from '@/types';
 import { getErrorMessage, secureStorage } from '@/utils/helpers';
-import { authApi, ApiError } from '@/services/api';
-import { initializeDataSync, shutdownDataSync, clearAllLocalData } from '@/services';
 
 interface AuthContextType {
   // State
@@ -35,7 +35,6 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authState, dispatch] = useReducer(authReducer, loadPersistedAuthState());
 
-  // Login function
   const login = useCallback(async (loginData: LoginInput): Promise<void> => {
     dispatch({ type: 'AUTH_LOGIN_START' });
 
@@ -52,11 +51,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         type: 'AUTH_LOGIN_FAILURE',
         payload: { error: errorMessage },
       });
-      throw error; // Re-throw to allow component-level error handling
+      throw error;
     }
   }, []);
 
-  // Register function
   const register = useCallback(async (userData: RegisterInput): Promise<void> => {
     dispatch({ type: 'AUTH_REGISTER_START' });
 
@@ -77,12 +75,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Logout function
   const logout = useCallback(async (): Promise<void> => {
     try {
       await authApi.logout();
     } finally {
-      // Clean up data synchronization
       try {
         shutdownDataSync();
         await clearAllLocalData();
@@ -95,12 +91,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Clear error function
   const clearError = useCallback((): void => {
     dispatch({ type: 'AUTH_CLEAR_ERROR' });
   }, []);
 
-  // Authentication validation effect
   useEffect(() => {
     if (authState.isAuthenticated) {
       const validateAuth = async () => {
@@ -146,7 +140,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authState.isAuthenticated, authState.user]);
 
-  // Computed values
   const isAuthenticated = authState.isAuthenticated;
   const currentUser = authState.user;
 
