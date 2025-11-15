@@ -1,13 +1,13 @@
-import { db } from './database';
-import type {
-  User,
-  Conversation,
-  Message,
-  ConversationParticipant,
-  SendMessageRequest,
-  DraftMessage,
-} from '../types/database';
 import { ensureDate } from '@/utils/helpers';
+import type {
+  Conversation,
+  ConversationParticipant,
+  DraftMessage,
+  Message,
+  SendMessageRequest,
+  User,
+} from '../types/database';
+import { db } from './database';
 
 export class DatabaseOperations {
   get db() {
