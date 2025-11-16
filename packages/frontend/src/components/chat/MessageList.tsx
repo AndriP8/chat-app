@@ -1,166 +1,110 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import type React from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { webSocketService } from '@/services/websocket';
 import type { UIMessage } from '@/types/chat';
 import { useAuth } from '../auth/AuthContext';
 import { MessageBubble } from './MessageBubble';
 import { ScrollToBottomButton } from './ScrollToBottomButton';
 
+type ScrollBehavior = 'auto' | 'smooth';
+export interface MessageListHandle {
+  scrollToBottom: (behavior?: ScrollBehavior) => void;
+}
+
 interface MessageListProps {
   messages: UIMessage[];
   isLoading?: boolean;
   conversationId?: string;
+  ref: React.Ref<MessageListHandle>;
 }
 
 const SCROLL_THRESHOLD = 300; // pixels from bottom to consider "at bottom"
 
-export const MessageList = ({ messages, isLoading = false, conversationId }: MessageListProps) => {
+export const MessageList = ({
+  messages,
+  isLoading = false,
+  conversationId,
+  ref,
+}: MessageListProps) => {
   const { currentUser } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const previousMessagesLengthRef = useRef(messages.length);
-  const previousScrollHeightRef = useRef(0);
-  const isInitialLoadRef = useRef(true);
-  const isScrollingRef = useRef(false);
-  const hasInitializedConversationRef = useRef<string | null>(null);
 
-  const checkIfAtBottom = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return false;
+  const prevMessagesLengthRef = useRef(messages.length);
 
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    return distanceFromBottom < SCROLL_THRESHOLD;
-  }, []);
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => 80,
+    overscan: 5,
+    onChange: (instance) => {
+      const container = containerRef.current;
+      if (!container || instance.scrollOffset === null) return;
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const container = containerRef.current;
-    if (!container) return;
+      const { scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - instance.scrollOffset - clientHeight;
+      const atBottom = distanceFromBottom < SCROLL_THRESHOLD;
+      setShowScrollButton(!atBottom);
+    },
+  });
 
-    const targetScrollTop = container.scrollHeight - container.clientHeight;
-
-    if (behavior === 'instant') {
-      container.scrollTop = targetScrollTop;
-      return;
-    }
-
-    isScrollingRef.current = true;
-    const startScrollTop = container.scrollTop;
-    const distance = targetScrollTop - startScrollTop;
-    const duration = 500;
-    let startTime: number | null = null;
-
-    const animateScroll = (currentTime: number) => {
-      if (startTime === null) startTime = currentTime;
-      const timeElapsed = currentTime - startTime;
-      const progress = Math.min(timeElapsed / duration, 1);
-      const easeOutCubic = 1 - (1 - progress) ** 3;
-
-      container.scrollTop = startScrollTop + distance * easeOutCubic;
-
-      if (progress < 1) {
-        requestAnimationFrame(animateScroll);
-      } else {
-        isScrollingRef.current = false;
-      }
-    };
-
-    requestAnimationFrame(animateScroll);
-  }, []);
-
-  const handleScroll = useCallback(() => {
-    if (isInitialLoadRef.current) return;
-    const atBottom = checkIfAtBottom();
-    setShowScrollButton(!atBottom);
-  }, [checkIfAtBottom]);
-
-  const handleScrollToBottomClick = useCallback(() => {
-    scrollToBottom('smooth');
-    setShowScrollButton(false);
-  }, [scrollToBottom]);
-
-  // Handle auto scroll on conversation change
-  useEffect(() => {
-    if (!conversationId) return;
-
-    const isNewConversation = hasInitializedConversationRef.current !== conversationId;
-
-    if (isNewConversation) {
-      hasInitializedConversationRef.current = conversationId;
-      isInitialLoadRef.current = true;
-
-      requestAnimationFrame(() => {
-        if (containerRef.current) {
-          scrollToBottom('instant');
-          setShowScrollButton(false);
-          previousScrollHeightRef.current = containerRef.current.scrollHeight;
-          previousMessagesLengthRef.current = messages.length;
-        }
-      });
-
-      const timer = setTimeout(() => {
-        isInitialLoadRef.current = false;
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [conversationId, scrollToBottom, messages.length]);
-
-  // Handle auto scroll on new messages and maintaining scroll position when not at bottom
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const hasNewMessages = messages.length > previousMessagesLengthRef.current;
-
-    if (hasNewMessages) {
-      if (isScrollingRef.current) {
-        previousMessagesLengthRef.current = messages.length;
-        requestAnimationFrame(() => {
-          previousScrollHeightRef.current = container.scrollHeight;
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = 'auto') => {
+      if (messages.length > 0) {
+        containerRef.current?.scrollTo({
+          top: containerRef.current.scrollHeight,
+          behavior,
         });
-        return;
       }
+    },
+    [messages.length]
+  );
 
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const currentlyAtBottom = distanceFromBottom < SCROLL_THRESHOLD;
+  // Expose scrollToBottom method via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToBottom,
+    }),
+    [scrollToBottom]
+  );
 
-      const previousScrollHeight = previousScrollHeightRef.current;
-      const previousScrollTop = scrollTop;
-
-      previousMessagesLengthRef.current = messages.length;
-
-      requestAnimationFrame(() => {
-        const currentScrollHeight = container.scrollHeight;
-        const heightDifference = currentScrollHeight - previousScrollHeight;
-
-        if (currentlyAtBottom) {
-          scrollToBottom('smooth');
-        } else if (heightDifference > 0) {
-          container.scrollTop = previousScrollTop + heightDifference;
-        }
-
-        previousScrollHeightRef.current = currentScrollHeight;
-      });
-    } else {
-      previousMessagesLengthRef.current = messages.length;
-      previousScrollHeightRef.current = container.scrollHeight;
+  useEffect(() => {
+    // Only scroll to bottom automatically if we open the chat
+    if (!messagesEndRef.current) {
+      scrollToBottom('auto');
+      prevMessagesLengthRef.current = messages.length;
     }
-  }, [messages, scrollToBottom]);
+  }, [scrollToBottom, messages.length]);
 
-  // Mark messages as read when they are displayed
+  // Auto scroll to bottom on new messages only if we were at the bottom before
+  useEffect(() => {
+    const hasNewMessages = messages.length > prevMessagesLengthRef.current;
+    if (hasNewMessages && !showScrollButton) {
+      scrollToBottom('auto');
+    }
+  }, [messages.length, scrollToBottom, showScrollButton]);
+
+  // Mark messages as read when they are displayed (only visible items in virtualizer)
   useEffect(() => {
     if (!conversationId || !currentUser || messages.length === 0) return;
+    // TODO: When user scroll to top and receive new message, the new message should mark as read without scroll to bottom and add indicator in scroll to bottom component
+    const visibleIndexes = new Set(virtualizer.getVirtualItems().map((item) => item.index));
 
+    // Filter for visible unread messages only
     const unreadMessages = messages.filter(
-      (message) => message.sender_id !== currentUser.id && message.status !== 'read'
+      (message, index) =>
+        visibleIndexes.has(index) &&
+        message.sender_id !== currentUser.id &&
+        message.status !== 'read'
     );
 
     for (const message of unreadMessages) {
       webSocketService.markMessageRead(message.id, conversationId);
     }
-  }, [messages, currentUser, conversationId]);
+  }, [messages, currentUser, conversationId, virtualizer]);
 
   if (isLoading) {
     return (
@@ -185,30 +129,48 @@ export const MessageList = ({ messages, isLoading = false, conversationId }: Mes
   }
   return (
     <div className="relative flex-1">
-      <div
-        ref={containerRef}
-        className="absolute inset-0 space-y-1 overflow-y-auto p-4"
-        onScroll={handleScroll}
-      >
-        {messages.map((message, index) => {
-          const isOwn = message.sender_id === currentUser?.id;
-          const prevMessage = index > 0 ? messages[index - 1] : null;
-          const showAvatar = !prevMessage || prevMessage.sender_id !== message.sender_id;
+      <div ref={containerRef} className="absolute inset-0 overflow-y-auto p-4">
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const message = messages[virtualItem.index];
+            const isOwn = message.sender_id === currentUser?.id;
+            const prevMessage = virtualItem.index > 0 ? messages[virtualItem.index - 1] : null;
+            const showAvatar = !prevMessage || prevMessage.sender_id !== message.sender_id;
 
-          return (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isOwn={isOwn}
-              showAvatar={showAvatar}
-            />
-          );
-        })}
+            return (
+              <div
+                key={message.id}
+                data-index={virtualItem.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+                className="space-y-1"
+              >
+                <MessageBubble message={message} isOwn={isOwn} showAvatar={showAvatar} />
+              </div>
+            );
+          })}
+        </div>
 
         <div ref={messagesEndRef} />
       </div>
 
-      {showScrollButton && <ScrollToBottomButton onClick={handleScrollToBottomClick} />}
+      {showScrollButton && (
+        <ScrollToBottomButton
+          onClick={() => virtualizer.scrollToIndex(messages.length - 1, { behavior: 'smooth' })}
+        />
+      )}
     </div>
   );
 };

@@ -1,15 +1,16 @@
 import { MessageCircle } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useWebSocketConversations } from '@/hooks/useWebSocketConversations';
 import type { ChatRoom } from '@/types/chat';
 import { ChatHeader } from './ChatHeader';
 import { ChatSidebar } from './ChatSidebar';
 import { MessageInput } from './MessageInput';
-import { MessageList } from './MessageList';
+import { MessageList, type MessageListHandle } from './MessageList';
 import { OfflineIndicator } from './OfflineIndicator';
 
 export default function ChatPage() {
   const [currentRoom, setCurrentRoom] = useState<ChatRoom | null>(null);
+  const messageListRef = useRef<MessageListHandle>(null);
   const { conversations, messages, loading, error, loadMessages, sendMessage } =
     useWebSocketConversations();
 
@@ -29,6 +30,9 @@ export default function ChatPage() {
       if (!currentRoom) return;
 
       await sendMessage(currentRoom.id, content);
+
+      // Scroll to bottom when user sends a message
+      messageListRef.current?.scrollToBottom;
     },
     [currentRoom, sendMessage]
   );
@@ -62,6 +66,7 @@ export default function ChatPage() {
             <ChatHeader room={currentRoom} />
             {/* Messages */}
             <MessageList
+              ref={messageListRef}
               messages={currentMessages}
               isLoading={loading.messages[currentRoom.id]}
               conversationId={currentRoom.id}
