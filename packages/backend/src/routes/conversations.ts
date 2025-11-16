@@ -4,6 +4,8 @@ import { conversationParticipants, conversations, db, messages, users } from '@/
 import { authMiddleware } from '@/middleware/auth';
 import {
   type ConversationResponse,
+  type GetMessagesQuery,
+  getMessagesSchema,
   type MessageResponse,
   type UserResponse,
 } from '@/schemas/conversation';
@@ -196,7 +198,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           });
         }
 
-        const { limit, before } = data as GetMessagesQuery;
+        const { limit, next_cursor } = data as GetMessagesQuery;
 
         const [participation] = await db
           .select()
@@ -217,8 +219,8 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
         }
 
         const baseCondition = eq(messages.conversation_id, conversationId);
-        const whereConditions = before
-          ? and(baseCondition, lt(messages.id, before))
+        const whereConditions = next_cursor
+          ? and(baseCondition, lt(messages.id, next_cursor))
           : baseCondition;
 
         const messagesData = await db
@@ -254,10 +256,15 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           formatMessageResponse(item.message, item.sender)
         );
 
+        const nextCursor = hasMore && messagesToReturn.length > 0
+          ? messagesToReturn[messagesToReturn.length - 1]?.message.id
+          : null;
+
         return reply.send({
           success: true,
           data: formattedMessages.reverse(),
           hasMore,
+          next_cursor: nextCursor,
         });
       } catch (error) {
         console.error('Get messages error:', error);

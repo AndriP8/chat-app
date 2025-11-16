@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const getMessagesSchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
-  before: z.string().uuid().optional(),
+  next_cursor: z.string().uuid().optional(),
 });
 
 export const sendMessageSchema = z.object({
