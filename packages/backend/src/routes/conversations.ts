@@ -7,11 +7,31 @@ import {
   type GetMessagesQuery,
   getMessagesSchema,
   type MessageResponse,
+  type MessageStatusEnum,
   type UserResponse,
 } from '@/schemas/conversation';
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-function formatUserResponse(user: any): UserResponse {
+type UserDbResult = {
+  id: string;
+  email: string;
+  name: string;
+  profile_picture_url: string | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+type MessageDbResult = {
+  id: string;
+  content: string;
+  status: MessageStatusEnum;
+  sender_id: string;
+  sequence_number: number | null;
+  conversation_id: string;
+  created_at: Date;
+  updated_at: Date;
+};
+
+function formatUserResponse(user: UserDbResult): UserResponse {
   return {
     id: user.id,
     email: user.email,
@@ -22,13 +42,13 @@ function formatUserResponse(user: any): UserResponse {
   };
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-function formatMessageResponse(message: any, sender: any): MessageResponse {
+function formatMessageResponse(message: MessageDbResult, sender: UserDbResult): MessageResponse {
   return {
     id: message.id,
     content: message.content,
     status: message.status,
     sender_id: message.sender_id,
+    sequence_number: message.sequence_number ?? undefined,
     conversation_id: message.conversation_id,
     created_at: message.created_at,
     updated_at: message.updated_at,
@@ -137,6 +157,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
                 content: messages.content,
                 status: messages.status,
                 sender_id: messages.sender_id,
+                sequence_number: messages.sequence_number,
                 conversation_id: messages.conversation_id,
                 created_at: messages.created_at,
                 updated_at: messages.updated_at,
@@ -164,7 +185,10 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
             updated_at: conversation.updated_at,
             participants: participants.map(formatUserResponse),
             last_message: lastMessageData
-              ? formatMessageResponse(lastMessageData.message, lastMessageData.sender)
+              ? formatMessageResponse(
+                  lastMessageData.message as MessageDbResult,
+                  lastMessageData.sender
+                )
               : null,
           });
         }
@@ -230,6 +254,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
               content: messages.content,
               status: messages.status,
               sender_id: messages.sender_id,
+              sequence_number: messages.sequence_number,
               conversation_id: messages.conversation_id,
               created_at: messages.created_at,
               updated_at: messages.updated_at,
@@ -253,12 +278,13 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
         const messagesToReturn = hasMore ? messagesData.slice(0, limit) : messagesData;
 
         const formattedMessages = messagesToReturn.map((item) =>
-          formatMessageResponse(item.message, item.sender)
+          formatMessageResponse(item.message as MessageDbResult, item.sender)
         );
 
-        const nextCursor = hasMore && messagesToReturn.length > 0
-          ? messagesToReturn[messagesToReturn.length - 1]?.message.id
-          : null;
+        const nextCursor =
+          hasMore && messagesToReturn.length > 0
+            ? messagesToReturn[messagesToReturn.length - 1]?.message.id
+            : null;
 
         return reply.send({
           success: true,

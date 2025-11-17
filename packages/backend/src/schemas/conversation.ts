@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const messageStatusEnum = z.enum(['sending', 'sent', 'delivered', 'read', 'failed']);
+
 export const getMessagesSchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
   next_cursor: z.string().uuid().optional(),
@@ -25,7 +27,7 @@ export const userResponseSchema = z.object({
 export const messageResponseSchema = z.object({
   id: z.string(),
   content: z.string(),
-  status: z.enum(['sending', 'sent', 'delivered', 'read', 'failed']),
+  status: messageStatusEnum,
   sender_id: z.string(),
   conversation_id: z.string(),
   created_at: z.date(),
@@ -49,3 +51,4 @@ export type GetMessagesQuery = z.infer<typeof getMessagesSchema>;
 export type UserResponse = z.infer<typeof userResponseSchema>;
 export type MessageResponse = z.infer<typeof messageResponseSchema>;
 export type ConversationResponse = z.infer<typeof conversationResponseSchema>;
+export type MessageStatusEnum = z.infer<typeof messageStatusEnum>;

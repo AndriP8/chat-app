@@ -10,11 +10,14 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import { uuidv7 } from 'uuidv7';
 
 export const users = pgTable(
   'users',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
+    id: uuid('id')
+      .$defaultFn(() => uuidv7())
+      .primaryKey(),
     email: varchar('email', { length: 255 }).notNull().unique(),
     password_hash: varchar('password_hash', { length: 255 }).notNull(),
     name: varchar('name', { length: 100 }).notNull(),
@@ -30,7 +33,9 @@ export const users = pgTable(
 export const conversations = pgTable(
   'conversations',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
+    id: uuid('id')
+      .$defaultFn(() => uuidv7())
+      .primaryKey(),
     name: varchar('name', { length: 100 }),
     created_by: uuid('created_by')
       .references(() => users.id)
@@ -64,7 +69,9 @@ export const conversationParticipants = pgTable(
 export const messages = pgTable(
   'messages',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
+    id: uuid('id')
+      .$defaultFn(() => uuidv7())
+      .primaryKey(),
     content: text('content').notNull(),
     status: varchar('status', { length: 20 }).default('sending').notNull(), // 'sending', 'sent', 'delivered', 'read', 'failed'
     created_at: timestamp('created_at').defaultNow().notNull(),
