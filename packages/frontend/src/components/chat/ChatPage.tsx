@@ -11,8 +11,16 @@ import { OfflineIndicator } from './OfflineIndicator';
 export default function ChatPage() {
   const [currentRoom, setCurrentRoom] = useState<ChatRoom | null>(null);
   const messageListRef = useRef<MessageListHandle>(null);
-  const { conversations, messages, loading, error, loadMessages, sendMessage } =
-    useWebSocketConversations();
+  const {
+    conversations,
+    messages,
+    loading,
+    pagination,
+    error,
+    loadMessages,
+    loadMoreMessages,
+    sendMessage,
+  } = useWebSocketConversations();
 
   const handleRoomSelect = useCallback(
     async (room: ChatRoom) => {
@@ -70,6 +78,9 @@ export default function ChatPage() {
               messages={currentMessages}
               isLoading={loading.messages[currentRoom.id]}
               conversationId={currentRoom.id}
+              onLoadMore={() => loadMoreMessages(currentRoom.id)}
+              hasMore={pagination.hasMore[currentRoom.id] ?? false}
+              isLoadingMore={loading.loadingMore[currentRoom.id] ?? false}
             />
             {/* Message Input */}
             <MessageInput onSendMessage={handleSendMessage} conversationId={currentRoom.id} />

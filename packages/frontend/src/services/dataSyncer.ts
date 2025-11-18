@@ -306,10 +306,13 @@ export class DataSyncer {
   /**
    * Load messages for a specific conversation from local database with fallback to server
    */
-  async loadMessages(conversationId: string, limit = 50): Promise<UIMessage[]> {
+  async loadMessages(
+    conversationId: string,
+    limit = 50
+  ): Promise<{ messages: UIMessage[]; hasMore: boolean }> {
     try {
       // Get messages from local database
-      const localMessages = await dbOps.getConversationMessages(conversationId);
+      const localMessages = await dbOps.getConversationMessages(conversationId, { limit });
 
       if (localMessages.length > 0) {
         // Check if we have complete conversation data by looking for a flag
@@ -320,7 +323,7 @@ export class DataSyncer {
         if (hasCompleteConversation) {
           // Convert database messages to UI messages by adding sender info
           const uiMessages = [];
-          for (const message of localMessages.slice(-limit)) {
+          for (const message of localMessages) {
             const sender = await dbOps.getUser(message.sender_id);
             if (sender) {
               uiMessages.push({

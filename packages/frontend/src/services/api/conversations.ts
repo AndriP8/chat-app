@@ -17,14 +17,14 @@ export const conversationApi = {
   getMessages: async (
     conversationId: string,
     query: GetMessagesQuery = {}
-  ): Promise<{ messages: Message[]; hasMore: boolean }> => {
+  ): Promise<{ messages: Message[]; hasMore: boolean; nextCursor: string | null }> => {
     const searchParams = new URLSearchParams();
 
     if (query.limit) {
       searchParams.append('limit', query.limit.toString());
     }
-    if (query.before) {
-      searchParams.append('before', query.before);
+    if (query.next_cursor) {
+      searchParams.append('next_cursor', query.next_cursor);
     }
 
     const queryString = searchParams.toString();
@@ -36,6 +36,7 @@ export const conversationApi = {
     return {
       messages: response.data,
       hasMore: response.hasMore,
+      nextCursor: response.next_cursor,
     };
   },
 };

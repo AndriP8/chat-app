@@ -217,17 +217,17 @@ export class DatabaseOperations {
     conversationId: string,
     options: {
       limit?: number;
-      before?: Date;
+      next_cursor?: string;
       after?: Date;
     } = {}
   ): Promise<Message[]> {
     try {
-      const { limit = 50, before, after } = options;
+      const { limit = 50, next_cursor, after } = options;
 
       let query = db.messages.where('conversation_id').equals(conversationId);
 
-      if (before) {
-        query = query.and((message) => ensureDate(message.created_at) < before);
+      if (next_cursor) {
+        query = query.and((message) => message.id < next_cursor);
       }
 
       if (after) {
@@ -238,22 +238,42 @@ export class DatabaseOperations {
 
       // Sort messages by created_at (primary) for chronological order
       // When timestamps are equal, use sequence numbers to maintain order
-      return messages
-        .sort((a, b) => {
-          const timeA = ensureDate(a.created_at).getTime();
-          const timeB = ensureDate(b.created_at).getTime();
+      const sortedMessages = messages.sort((a, b) => {
+        const timeA = ensureDate(a.created_at).getTime();
+        const timeB = ensureDate(b.created_at).getTime();
 
-          if (timeA !== timeB) {
-            return timeA - timeB;
-          }
+        if (timeA !== timeB) {
+          return timeA - timeB;
+        }
 
-          const seqA = a.sequence_number ?? 0;
-          const seqB = b.sequence_number ?? 0;
-          return seqA - seqB;
-        })
-        .slice(0, limit);
+        const seqA = a.sequence_number ?? 0;
+        const seqB = b.sequence_number ?? 0;
+        return seqA - seqB;
+      });
+      return sortedMessages.slice(-limit);
     } catch (error) {
       throw new Error(`Failed to get conversation messages: ${error}`);
+    }
+  }
+
+  /**
+   * Check if there are older messages available for pagination
+   */
+  async hasOlderMessages(conversationId: string, oldestMessageId: string): Promise<boolean> {
+    try {
+      const oldestMessage = await db.messages.get(oldestMessageId);
+      if (!oldestMessage) return false;
+
+      const olderMessagesCount = await db.messages
+        .where('conversation_id')
+        .equals(conversationId)
+        .and((message) => ensureDate(message.created_at) < ensureDate(oldestMessage.created_at))
+        .count();
+
+      return olderMessagesCount > 0;
+    } catch (error) {
+      console.error(`Failed to check for older messages: ${error}`);
+      return false;
     }
   }
 

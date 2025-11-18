@@ -14,6 +14,10 @@ export interface UseConversationsReturn {
   loading: {
     conversations: boolean;
     messages: Record<string, boolean>;
+    loadingMore: Record<string, boolean>;
+  };
+  pagination: {
+    hasMore: Record<string, boolean>;
   };
   error: {
     conversations?: string;
@@ -22,6 +26,7 @@ export interface UseConversationsReturn {
   };
   loadConversations: () => Promise<void>;
   loadMessages: (conversationId: string) => Promise<void>;
+  loadMoreMessages: (conversationId: string) => Promise<void>;
   sendMessage: (conversationId: string, content: string) => Promise<void>;
 }
 
@@ -34,7 +39,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
   const processedMessagesRef = useRef<Set<string>>(new Set());
   const processedStatusUpdatesRef = useRef<Set<string>>(new Set());
 
-  const { conversations, messages, loading, errors } = state;
+  const { conversations, messages, loading, errors, pagination } = state;
   const messagesRef = useRef(messages);
 
   // Update ref when messages change
@@ -203,11 +208,11 @@ export function useWebSocketConversations(): UseConversationsReturn {
           type: 'CLEAR_ERROR',
           payload: { type: 'messages', conversationId },
         });
-        const messages = await dataSyncer.loadMessages(conversationId, 50);
+        const { messages, hasMore } = await dataSyncer.loadMessages(conversationId, 50);
 
         dispatch({
           type: 'SET_MESSAGES',
-          payload: { conversationId, messages },
+          payload: { conversationId, messages, hasMore },
         });
 
         // Join the conversation for real-time updates
@@ -230,6 +235,47 @@ export function useWebSocketConversations(): UseConversationsReturn {
       }
     },
     [joinConversation]
+  );
+
+  // Load more (older) messages for pagination
+  const loadMoreMessages = useCallback(
+    async (conversationId: string) => {
+      try {
+        const currentMessages = messages[conversationId];
+        const isNoMessages = !currentMessages || currentMessages.length === 0;
+        const isLoadingMore = loading.loadingMore[conversationId];
+        const isNoMoreMessage = pagination.hasMore[conversationId] === false;
+
+        if (isNoMessages || isLoadingMore || isNoMoreMessage) return;
+
+        dispatch({
+          type: 'LOAD_MORE_MESSAGES_START',
+          payload: { conversationId },
+        });
+
+        const oldestMessage = currentMessages[0];
+        const { messages: olderMessages, hasMore } = await dataSyncer.loadMoreMessages(
+          conversationId,
+          oldestMessage.id,
+          50
+        );
+
+        dispatch({
+          type: 'LOAD_MORE_MESSAGES_SUCCESS',
+          payload: { conversationId, messages: olderMessages, hasMore },
+        });
+      } catch (err) {
+        console.error('Failed to load more messages:', err);
+        dispatch({
+          type: 'LOAD_MORE_MESSAGES_FAILURE',
+          payload: {
+            conversationId,
+            error: err instanceof Error ? err.message : 'Failed to load more messages',
+          },
+        });
+      }
+    },
+    [messages, loading.loadingMore, pagination.hasMore]
   );
 
   const sendMessage = useCallback(
@@ -312,6 +358,10 @@ export function useWebSocketConversations(): UseConversationsReturn {
     loading: {
       conversations: loading.conversations,
       messages: loading.messages,
+      loadingMore: loading.loadingMore,
+    },
+    pagination: {
+      hasMore: pagination.hasMore,
     },
     error: {
       conversations: errors.conversations,
@@ -320,6 +370,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
     },
     loadConversations,
     loadMessages,
+    loadMoreMessages,
     sendMessage,
   };
 }

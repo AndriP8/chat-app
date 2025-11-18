@@ -7,6 +7,10 @@ export const initialConversationsState: ConversationsState = {
   loading: {
     conversations: false,
     messages: {},
+    loadingMore: {},
+  },
+  pagination: {
+    hasMore: {},
   },
   errors: {},
 };
@@ -28,6 +32,13 @@ export function conversationsReducer(
         messages: {
           ...state.messages,
           [action.payload.conversationId]: action.payload.messages,
+        },
+        pagination: {
+          ...state.pagination,
+          hasMore: {
+            ...state.pagination.hasMore,
+            [action.payload.conversationId]: action.payload.hasMore,
+          },
         },
       };
 
@@ -175,6 +186,79 @@ export function conversationsReducer(
           [conversationId]: conversationMessages.filter(
             (msg) => msg.tempId !== tempId && !(msg.isTemporary && msg.id === tempId)
           ),
+        },
+      };
+    }
+
+    case 'LOAD_MORE_MESSAGES_START': {
+      const { conversationId } = action.payload;
+      return {
+        ...state,
+        loading: {
+          ...state.loading,
+          loadingMore: {
+            ...state.loading.loadingMore,
+            [conversationId]: true,
+          },
+        },
+      };
+    }
+
+    case 'LOAD_MORE_MESSAGES_SUCCESS': {
+      const { conversationId, messages: newMessages, hasMore } = action.payload;
+      const existingMessages = state.messages[conversationId] || [];
+
+      const messageMap = new Map(existingMessages.map((msg) => [msg.id, msg]));
+      for (const msg of newMessages) {
+        if (!messageMap.has(msg.id)) {
+          messageMap.set(msg.id, msg);
+        }
+      }
+
+      const allMessages = Array.from(messageMap.values()).sort(
+        (a, b) => a.created_at.getTime() - b.created_at.getTime()
+      );
+
+      return {
+        ...state,
+        messages: {
+          ...state.messages,
+          [conversationId]: allMessages,
+        },
+        pagination: {
+          ...state.pagination,
+          hasMore: {
+            ...state.pagination.hasMore,
+            [conversationId]: hasMore,
+          },
+        },
+        loading: {
+          ...state.loading,
+          loadingMore: {
+            ...state.loading.loadingMore,
+            [conversationId]: false,
+          },
+        },
+      };
+    }
+
+    case 'LOAD_MORE_MESSAGES_FAILURE': {
+      const { conversationId, error } = action.payload;
+      return {
+        ...state,
+        loading: {
+          ...state.loading,
+          loadingMore: {
+            ...state.loading.loadingMore,
+            [conversationId]: false,
+          },
+        },
+        errors: {
+          ...state.errors,
+          messages: {
+            ...state.errors.messages,
+            [conversationId]: error,
+          },
         },
       };
     }

@@ -41,7 +41,7 @@ export interface SendMessageRequest {
 
 export interface GetMessagesQuery {
   limit?: number;
-  before?: string;
+  next_cursor?: string;
 }
 
 export interface ApiResponse<T> {
@@ -63,6 +63,7 @@ export type ConversationResponse = ChatRoom;
 export interface MessagesResponse {
   data: Message[];
   hasMore: boolean;
+  next_cursor: string | null;
 }
 
 export type MessageResponse = Message;
@@ -75,6 +76,10 @@ export interface ConversationsState {
   loading: {
     conversations: boolean;
     messages: Record<string, boolean>;
+    loadingMore: Record<string, boolean>;
+  };
+  pagination: {
+    hasMore: Record<string, boolean>;
   };
   errors: {
     conversations?: string;
@@ -86,7 +91,10 @@ export interface ConversationsState {
 
 export type ConversationsAction =
   | { type: 'SET_CONVERSATIONS'; payload: ChatRoom[] }
-  | { type: 'SET_MESSAGES'; payload: { conversationId: string; messages: UIMessage[] } }
+  | {
+      type: 'SET_MESSAGES';
+      payload: { conversationId: string; messages: UIMessage[]; hasMore: boolean };
+    }
   | { type: 'ADD_MESSAGE'; payload: { conversationId: string; message: UIMessage } }
   | {
       type: 'UPDATE_MESSAGE';
@@ -125,4 +133,16 @@ export type ConversationsAction =
   | {
       type: 'REMOVE_TEMP_MESSAGE';
       payload: { conversationId: string; tempId: string };
+    }
+  | {
+      type: 'LOAD_MORE_MESSAGES_START';
+      payload: { conversationId: string };
+    }
+  | {
+      type: 'LOAD_MORE_MESSAGES_SUCCESS';
+      payload: { conversationId: string; messages: UIMessage[]; hasMore: boolean };
+    }
+  | {
+      type: 'LOAD_MORE_MESSAGES_FAILURE';
+      payload: { conversationId: string; error: string };
     };
