@@ -20,6 +20,7 @@ interface MessageListProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  loadMoreError?: string;
 }
 
 const SCROLL_THRESHOLD = 300; // pixels from bottom to consider "at bottom"
@@ -33,6 +34,7 @@ export const MessageList = ({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
+  loadMoreError,
 }: MessageListProps) => {
   const { currentUser } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -190,7 +192,7 @@ export const MessageList = ({
         )}
 
         {/* Show message if no more messages to load */}
-        {!hasMore && messages.length > 0 && (
+        {!hasMore && messages.length > 0 && !loadMoreError && (
           <div className="mb-4 flex justify-center">
             <div className="rounded-full bg-gray-100 px-4 py-2 text-gray-500 text-sm">
               No more messages

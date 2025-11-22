@@ -15,11 +15,21 @@ export type TabSyncMessage =
         status: Message['status'];
       };
       tabId: string;
+    }
+  | {
+      type: 'PAGINATION_COMPLETED';
+      payload: {
+        conversationId: string;
+        messageCount: number;
+        hasMore: boolean;
+      };
+      tabId: string;
     };
 
 export interface BroadcastEventHandlers {
   onMessageReceived?: (message: Message) => void;
   onMessageStatusUpdated?: (messageId: string, status: Message['status']) => void;
+  onPaginationCompleted?: (conversationId: string, messageCount: number, hasMore: boolean) => void;
   onUserTyping?: (conversationId: string, userId: string) => void;
   onUserStoppedTyping?: (conversationId: string, userId: string) => void;
 }
@@ -78,6 +88,13 @@ export class BroadcastChannelService {
       case 'MESSAGE_STATUS_UPDATED':
         this.eventHandlers.onMessageStatusUpdated?.(payload.messageId, payload.status);
         break;
+      case 'PAGINATION_COMPLETED':
+        this.eventHandlers.onPaginationCompleted?.(
+          payload.conversationId,
+          payload.messageCount,
+          payload.hasMore
+        );
+        break;
       default:
         console.warn('Unknown broadcast message type:', type);
     }
@@ -116,6 +133,21 @@ export class BroadcastChannelService {
     this.broadcast({
       type: 'MESSAGE_STATUS_UPDATED',
       payload: { messageId, status },
+      tabId: this.tabId,
+    });
+  }
+
+  /**
+   * Broadcast that pagination has completed
+   */
+  broadcastPaginationCompleted(
+    conversationId: string,
+    messageCount: number,
+    hasMore: boolean
+  ): void {
+    this.broadcast({
+      type: 'PAGINATION_COMPLETED',
+      payload: { conversationId, messageCount, hasMore },
       tabId: this.tabId,
     });
   }

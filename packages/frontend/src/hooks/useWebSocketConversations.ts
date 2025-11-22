@@ -138,6 +138,30 @@ export function useWebSocketConversations(): UseConversationsReturn {
     []
   );
 
+  // Handle pagination completed from other tabs
+  const handlePaginationCompleted = useCallback(
+    async (conversationId: string, _messageCount: number, hasMore: boolean) => {
+      const localMessages = await dbOps.getConversationMessages(conversationId, { limit: 1000 });
+
+      const uiMessages = [];
+      for (const message of localMessages) {
+        const sender = await dbOps.getUser(message.sender_id);
+        if (sender) {
+          uiMessages.push({
+            ...message,
+            sender,
+          });
+        }
+      }
+
+      dispatch({
+        type: 'SET_MESSAGES',
+        payload: { conversationId, messages: uiMessages, hasMore },
+      });
+    },
+    []
+  );
+
   useEffect(() => {
     dataSyncer.on('messageReceived', handleDataSyncerMessage);
     dataSyncer.on('messageStatusUpdated', handleDataSyncerStatusUpdate);
@@ -146,6 +170,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
     broadcastChannelService.setEventHandlers({
       onMessageReceived: handleDataSyncerMessage,
       onMessageStatusUpdated: handleDataSyncerStatusUpdate,
+      onPaginationCompleted: handlePaginationCompleted,
     });
 
     return () => {
@@ -153,7 +178,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
       dataSyncer.off('messageStatusUpdated');
       broadcastChannelService.destroy();
     };
-  }, [handleDataSyncerMessage, handleDataSyncerStatusUpdate]);
+  }, [handleDataSyncerMessage, handleDataSyncerStatusUpdate, handlePaginationCompleted]);
 
   // Join conversation when current conversation changes
   const joinConversation = useCallback((conversationId: string) => {

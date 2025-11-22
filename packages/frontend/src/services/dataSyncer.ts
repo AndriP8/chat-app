@@ -6,7 +6,6 @@ import { broadcastChannelService } from './broadcastChannel';
 import { db } from './database';
 import { dbOps } from './databaseOperations';
 import { messageScheduler } from './messageScheduler';
-import { networkStatusService } from './networkStatus';
 import { getNextSequenceNumber } from './sequenceNumber';
 import type { WebSocketService } from './websocket';
 
@@ -232,7 +231,6 @@ export class DataSyncer {
 
       // If no local data, fetch from server using HTTP API
       try {
-        // Import conversationApi dynamically to avoid circular dependencies
         const serverData = await conversationApi.getConversations();
 
         // Store in local database
@@ -416,9 +414,9 @@ export class DataSyncer {
 
         return {
           messages: serverData.messages.map((message) => ({
-          ...message,
-          created_at: ensureDate(message.created_at),
-          updated_at: ensureDate(message.updated_at),
+            ...message,
+            created_at: ensureDate(message.created_at),
+            updated_at: ensureDate(message.updated_at),
           })),
           hasMore: serverData.hasMore,
         };
@@ -501,6 +499,13 @@ export class DataSyncer {
 
         // Note: Sequence counter initialization is NOT needed here for pagination
         // It's only initialized once during initial message load in loadMessages()
+
+        // Broadcast pagination completion to other tabs
+        broadcastChannelService.broadcastPaginationCompleted(
+          conversationId,
+          serverData.messages.length,
+          serverData.hasMore
+        );
 
         return {
           messages: serverData.messages.map((message) => ({
