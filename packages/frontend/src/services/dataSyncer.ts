@@ -3,6 +3,7 @@ import { ensureDate } from '@/utils/helpers';
 import type { Message, SendMessageRequest } from '../types/database';
 import conversationApi from './api/conversations';
 import { broadcastChannelService } from './broadcastChannel';
+import { db } from './database';
 import { dbOps } from './databaseOperations';
 import { messageScheduler } from './messageScheduler';
 import { networkStatusService } from './networkStatus';
@@ -304,6 +305,37 @@ export class DataSyncer {
   }
 
   /**
+   * Initialize sequence counter for a user in a conversation based on existing messages
+   */
+  private async initializeSequenceCounter(
+    conversationId: string,
+    userId: string,
+    messages: UIMessage[]
+  ): Promise<void> {
+    try {
+      const existingCounter = await db.sequence_counters.get([conversationId, userId]);
+      if (existingCounter) return;
+
+      const userMessages = messages.filter(
+        (m) => m.sender_id === userId && m.sequence_number != null
+      );
+
+      if (!userMessages.length) return;
+
+      const maxSequence = Math.max(...userMessages.map((m) => m.sequence_number!));
+
+      await db.sequence_counters.put({
+        conversation_id: conversationId,
+        user_id: userId,
+        next_sequence: maxSequence + 1,
+        updated_at: new Date(),
+      });
+    } catch (error) {
+      console.error('Failed to initialize sequence counter:', error);
+    }
+  }
+
+  /**
    * Load messages for a specific conversation from local database with fallback to server
    */
   async loadMessages(
@@ -335,7 +367,14 @@ export class DataSyncer {
             }
           }
 
-          return uiMessages;
+          let hasMore = false;
+          const paginationMeta = await dbOps.getPaginationMetadata(conversationId);
+
+          if (paginationMeta && uiMessages.length > 0) {
+            hasMore = paginationMeta.has_more;
+          }
+
+          return { messages: uiMessages, hasMore };
         }
       }
 
@@ -343,9 +382,7 @@ export class DataSyncer {
       try {
         const serverData = await conversationApi.getMessages(conversationId, { limit });
 
-        // Store messages and users locally
         for (const message of serverData.messages) {
-          // Store the message
           await dbOps.upsertMessage({
             id: message.id,
             content: message.content,
@@ -358,17 +395,145 @@ export class DataSyncer {
           });
         }
 
-        return serverData.messages.map((message) => ({
+        // Store pagination metadata
+        if (serverData.messages.length > 0) {
+          const oldestMessageId = serverData.messages[0].id;
+          await dbOps.upsertPaginationMetadata(conversationId, {
+            has_more: serverData.hasMore,
+            next_cursor: serverData.nextCursor,
+            last_message_id: oldestMessageId,
+          });
+        }
+
+        // Initialize sequence counters for current user based on loaded messages
+        if (this.currentUserId && serverData.messages.length > 0) {
+          await this.initializeSequenceCounter(
+            conversationId,
+            this.currentUserId,
+            serverData.messages
+          );
+        }
+
+        return {
+          messages: serverData.messages.map((message) => ({
           ...message,
           created_at: ensureDate(message.created_at),
           updated_at: ensureDate(message.updated_at),
-        }));
+          })),
+          hasMore: serverData.hasMore,
+        };
       } catch (apiError) {
         console.error('Failed to fetch messages from server:', apiError);
-        return [];
+        return { messages: [], hasMore: false };
       }
     } catch (error) {
       console.error('Failed to load messages:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load more (older) messages for pagination
+   */
+  async loadMoreMessages(
+    conversationId: string,
+    oldestMessageId: string,
+    limit = 50
+  ): Promise<{ messages: UIMessage[]; hasMore: boolean }> {
+    try {
+      // First, try to load from local IndexedDB
+      const localMessages = await dbOps.getConversationMessages(conversationId, {
+        limit,
+        next_cursor: oldestMessageId,
+      });
+
+      // If we have messages locally AND we got the full limit, use local data
+      // Otherwise, fetch from server (local cache might be incomplete)
+      if (localMessages.length === limit) {
+        // Convert to UI messages
+        const uiMessages = [];
+        for (const message of localMessages) {
+          const sender = await dbOps.getUser(message.sender_id);
+          if (sender) {
+            uiMessages.push({
+              ...message,
+              sender,
+              created_at: ensureDate(message.created_at),
+              updated_at: ensureDate(message.updated_at),
+            });
+          }
+        }
+
+        const paginationMetadata = await dbOps.getPaginationMetadata(conversationId);
+
+        return { messages: uiMessages, hasMore: paginationMetadata?.has_more ?? false };
+      }
+
+      try {
+        const serverData = await conversationApi.getMessages(conversationId, {
+          limit,
+          next_cursor: oldestMessageId,
+        });
+
+        // Store messages locally for future offline access
+        for (const message of serverData.messages) {
+          await dbOps.upsertMessage({
+            id: message.id,
+            content: message.content,
+            status: message.status,
+            sender_id: message.sender_id,
+            conversation_id: message.conversation_id,
+            tempId: message.tempId,
+            created_at: message.created_at,
+            updated_at: message.updated_at,
+          });
+        }
+
+        // Update pagination metadata with server response
+        if (serverData.messages.length > 0) {
+          const oldestNewMessageId = serverData.messages[0].id;
+          await dbOps.upsertPaginationMetadata(conversationId, {
+            has_more: serverData.hasMore,
+            next_cursor: serverData.nextCursor,
+            last_message_id: oldestNewMessageId,
+          });
+        }
+
+        // Note: Sequence counter initialization is NOT needed here for pagination
+        // It's only initialized once during initial message load in loadMessages()
+
+        return {
+          messages: serverData.messages.map((message) => ({
+            ...message,
+            created_at: ensureDate(message.created_at),
+            updated_at: ensureDate(message.updated_at),
+          })),
+          hasMore: serverData.hasMore,
+        };
+      } catch (apiError) {
+        console.error('Failed to fetch more messages from server:', apiError);
+
+        // Fallback to local messages if we have any, even if incomplete
+        if (localMessages.length > 0) {
+          const uiMessages = [];
+          for (const message of localMessages) {
+            const sender = await dbOps.getUser(message.sender_id);
+            if (sender) {
+              uiMessages.push({
+                ...message,
+                sender,
+                created_at: ensureDate(message.created_at),
+                updated_at: ensureDate(message.updated_at),
+              });
+            }
+          }
+          return { messages: uiMessages, hasMore: false };
+        }
+
+        return { messages: [], hasMore: false };
+      }
+    } catch (error) {
+      console.error('Failed to load more messages:', error);
       throw error;
     }
   }

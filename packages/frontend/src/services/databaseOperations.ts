@@ -4,6 +4,7 @@ import type {
   ConversationParticipant,
   DraftMessage,
   Message,
+  PaginationMetadata,
   SendMessageRequest,
   User,
 } from '../types/database';
@@ -274,6 +275,54 @@ export class DatabaseOperations {
     } catch (error) {
       console.error(`Failed to check for older messages: ${error}`);
       return false;
+    }
+  }
+
+  /**
+   * Get pagination metadata for a conversation
+   */
+  async getPaginationMetadata(conversationId: string): Promise<PaginationMetadata | undefined> {
+    try {
+      return await db.pagination_metadata.get(conversationId);
+    } catch (error) {
+      console.error(`Failed to get pagination metadata: ${error}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * Update or create pagination metadata for a conversation
+   */
+  async upsertPaginationMetadata(
+    conversationId: string,
+    metadata: Omit<PaginationMetadata, 'conversation_id' | 'updated_at'>
+  ): Promise<PaginationMetadata> {
+    try {
+      const existingMetadata = await db.pagination_metadata.get(conversationId);
+      const paginationMetadata = {
+        conversation_id: conversationId,
+        ...metadata,
+        updated_at: new Date(),
+      };
+      if (existingMetadata) {
+        await db.pagination_metadata.update(conversationId, paginationMetadata);
+        return paginationMetadata;
+      }
+      await db.pagination_metadata.add(paginationMetadata);
+      return paginationMetadata;
+    } catch (error) {
+      throw new Error(`Failed to upsert pagination metadata: ${error}`);
+    }
+  }
+
+  /**
+   * Clear pagination metadata for a conversation
+   */
+  async clearPaginationMetadata(conversationId: string): Promise<void> {
+    try {
+      await db.pagination_metadata.delete(conversationId);
+    } catch (error) {
+      console.error(`Failed to clear pagination metadata: ${error}`);
     }
   }
 
@@ -624,6 +673,7 @@ export class DatabaseOperations {
           db.draft_messages,
           db.send_message_requests,
           db.sequence_counters,
+          db.pagination_metadata,
         ],
         async () => {
           await db.users.clear();
@@ -633,6 +683,7 @@ export class DatabaseOperations {
           await db.draft_messages.clear();
           await db.send_message_requests.clear();
           await db.sequence_counters.clear();
+          await db.pagination_metadata.clear();
         }
       );
     } catch (error) {

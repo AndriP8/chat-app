@@ -60,6 +60,14 @@ export interface SequenceCounter {
   updated_at: Date;
 }
 
+export interface PaginationMetadata {
+  conversation_id: string;
+  has_more: boolean;
+  next_cursor: string | null;
+  last_message_id: string | null;
+  updated_at: Date;
+}
+
 // Database schema types for Dexie
 export interface DatabaseSchema {
   users: User;
@@ -69,4 +77,5 @@ export interface DatabaseSchema {
   draft_messages: DraftMessage;
   send_message_requests: SendMessageRequest;
   sequence_counters: SequenceCounter;
+  pagination_metadata: PaginationMetadata;
 }

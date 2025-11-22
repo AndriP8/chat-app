@@ -5,6 +5,7 @@ import type {
   DatabaseSchema,
   DraftMessage,
   Message,
+  PaginationMetadata,
   SendMessageRequest,
   SequenceCounter,
   User,
@@ -18,6 +19,7 @@ class ChatDatabase extends Dexie {
   draft_messages!: EntityTable<DraftMessage, 'id'>;
   send_message_requests!: EntityTable<SendMessageRequest, 'id'>;
   sequence_counters!: EntityTable<SequenceCounter, 'conversation_id' | 'user_id'>;
+  pagination_metadata!: EntityTable<PaginationMetadata, 'conversation_id'>;
 
   constructor() {
     super('ChatAppDatabase');
@@ -31,6 +33,7 @@ class ChatDatabase extends Dexie {
       draft_messages: 'id, conversation_id, user_id, [conversation_id+user_id], updated_at',
       send_message_requests: 'id, message_id, status, created_at, last_sent_at',
       sequence_counters: '[conversation_id+user_id], conversation_id, user_id, updated_at',
+      pagination_metadata: 'conversation_id, updated_at',
     });
 
     // Add hooks for automatic timestamp updates
@@ -83,6 +86,15 @@ class ChatDatabase extends Dexie {
 
     this.sequence_counters.hook('updating', (modifications, _primKey, _obj, _trans) => {
       const mods = modifications as Partial<SequenceCounter>;
+      if (!mods.updated_at) mods.updated_at = new Date();
+    });
+
+    this.pagination_metadata.hook('creating', (_primKey, obj, _trans) => {
+      if (!obj.updated_at) obj.updated_at = new Date();
+    });
+
+    this.pagination_metadata.hook('updating', (modifications, _primKey, _obj, _trans) => {
+      const mods = modifications as Partial<PaginationMetadata>;
       if (!mods.updated_at) mods.updated_at = new Date();
     });
   }
