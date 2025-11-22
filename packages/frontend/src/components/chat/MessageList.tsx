@@ -78,14 +78,21 @@ export const MessageList = ({
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = 'auto') => {
-      if (messages.length > 0) {
-        containerRef.current?.scrollTo({
-          top: containerRef.current.scrollHeight,
-          behavior,
+      if (messages.length > 0 && containerRef.current) {
+        virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+
+        requestAnimationFrame(() => {
+          const container = containerRef.current;
+          if (container) {
+            container.scrollTo({
+              top: container.scrollHeight,
+              behavior,
+            });
+          }
         });
       }
     },
-    [messages.length]
+    [messages.length, virtualizer]
   );
 
   // Expose scrollToBottom method via ref
@@ -236,11 +243,7 @@ export const MessageList = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {showScrollButton && (
-        <ScrollToBottomButton
-          onClick={() => virtualizer.scrollToIndex(messages.length - 1, { behavior: 'smooth' })}
-        />
-      )}
+      {showScrollButton && <ScrollToBottomButton onClick={() => scrollToBottom('smooth')} />}
     </div>
   );
 };
