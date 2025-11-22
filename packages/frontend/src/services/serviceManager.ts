@@ -63,7 +63,7 @@ export async function initializeDataSync(config?: DataSyncConfig): Promise<void>
     // Initialize DataSyncer with the WebSocket adapter
     await dataSyncer.initialize(webSocketService, config?.currentUserId);
 
-    console.log('Data Sync layer initialized successfully');
+    ('Data Sync layer initialized successfully');
   } catch (error) {
     console.error('Failed to initialize Data Sync layer:', error);
     throw error;
@@ -76,7 +76,6 @@ export async function initializeDataSync(config?: DataSyncConfig): Promise<void>
 export function shutdownDataSync(): void {
   try {
     dataSyncer.shutdown();
-    console.log('Data Sync layer shutdown successfully');
   } catch (error) {
     console.error('Error during Data Sync layer shutdown:', error);
   }
@@ -119,7 +118,6 @@ export async function getDataSyncStatus(): Promise<DataSyncStatus> {
 export async function clearAllLocalData(): Promise<void> {
   try {
     await dataSyncer.clearLocalData();
-    console.log('All local data cleared successfully');
   } catch (error) {
     console.error('Error clearing local data:', error);
     throw error;

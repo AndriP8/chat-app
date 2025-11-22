@@ -507,7 +507,6 @@ export class DatabaseOperations {
 
         if (failedMessages.length > 0) {
           await db.messages.bulkDelete(failedMessages.map((m) => m.id));
-          console.log(`Cleaned up ${failedMessages.length} failed temporary messages`);
         }
 
         return failedMessages.length;
@@ -544,7 +543,6 @@ export class DatabaseOperations {
 
         if (orphanedMessages.length > 0) {
           await db.messages.bulkDelete(orphanedMessages.map((m) => m.id));
-          console.log(`Cleaned up ${orphanedMessages.length} orphaned temporary messages`);
         }
 
         return orphanedMessages.length;

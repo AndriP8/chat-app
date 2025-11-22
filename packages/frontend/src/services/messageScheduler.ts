@@ -1,8 +1,6 @@
 import { ensureDate } from '@/utils/helpers';
 import type { Message, SendMessageRequest } from '../types/database';
 import { dbOps } from './databaseOperations';
-import type { SendMessageRequest, Message } from '../types/database';
-import { ensureDate } from '@/utils/helpers';
 
 interface SchedulerConfig {
   maxRetries: number;
@@ -208,8 +206,6 @@ export class MessageScheduler {
 
       // Mark request as successful and remove from queue
       await dbOps.deleteSendRequest(request.id);
-
-      console.log(`Message sent successfully: ${request.message_id}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const isTimeoutError = errorMessage.includes('timeout');
@@ -253,16 +249,6 @@ export class MessageScheduler {
 
       // Clean up orphaned temporary messages
       await dbOps.cleanupOrphanedTemporaryMessages();
-
-      // Get stats for monitoring
-      const stats = await dbOps.getTemporaryMessageStats();
-      const queueStatus = await this.getQueueStatus();
-
-      console.log('Cleanup completed', {
-        temporaryMessages: stats,
-        queueStatus,
-        timestamp: new Date().toISOString(),
-      });
     } catch (error) {
       console.error('Error during cleanup:', error);
     }
@@ -332,7 +318,6 @@ export class MessageScheduler {
 
       if (request) {
         await dbOps.deleteSendRequest(request.id);
-        console.log(`Cleaned up send request for processed message: ${messageId}`);
       }
     } catch (error) {
       console.error('Error cleaning up processed message:', error);

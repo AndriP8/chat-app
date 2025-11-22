@@ -113,9 +113,6 @@ export class DataSyncer {
       try {
         // Replace temporary message with server message
         const replacedMessage = await dbOps.replaceTemporaryMessage(message.tempId, message);
-        console.log(
-          `Replaced temporary message ${message.tempId} with server message ${message.id}`
-        );
 
         // Clean up the send request for this message
         await messageScheduler.cleanupProcessedMessage(message.tempId);
@@ -187,7 +184,7 @@ export class DataSyncer {
         try {
           await messageScheduler.cleanupProcessedMessage(update.messageId);
         } catch (_error) {
-          console.log(
+          console.error(
             `Cleanup by message ID failed, this is normal for temp IDs: ${update.messageId}`
           );
         }

@@ -63,7 +63,6 @@ export class BroadcastChannelService {
     try {
       this.channel = new BroadcastChannel(this.channelName);
       this.channel.addEventListener('message', this.handleBroadcastMessage);
-      console.log(`BroadcastChannel initialized with tab ID: ${this.tabId}`);
     } catch (error) {
       console.error('Failed to initialize BroadcastChannel:', error);
       this.isSupported = false;
@@ -169,7 +168,6 @@ export class BroadcastChannelService {
       this.channel = null;
     }
     this.eventHandlers = {};
-    console.log(`BroadcastChannel destroyed for tab ${this.tabId}`);
   }
 }
 
