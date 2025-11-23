@@ -44,6 +44,7 @@ export const userResponseSchema = z.object({
   email: z.string(),
   name: z.string(),
   profile_picture_url: z.string().nullable(),
+  is_demo: z.boolean().optional(),
   created_at: z.date(),
   updated_at: z.date(),
 });

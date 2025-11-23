@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, ne, sql } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { conversationParticipants, conversations, db, messages, users } from '@/db';
 import { authMiddleware } from '@/middleware/auth';
@@ -62,6 +62,20 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
     try {
       const userId = request.user!.id;
 
+      // Get current user to check if they are a demo user
+      const [currentUser] = await db
+        .select({ is_demo: users.is_demo })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!currentUser) {
+        return reply.status(404).send({
+          success: false,
+          error: 'User not found',
+        });
+      }
+
       const otherUsers = await db
         .select({
           id: users.id,
@@ -72,7 +86,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           updated_at: users.updated_at,
         })
         .from(users)
-        .where(sql`${users.id} != ${userId}`);
+        .where(and(ne(users.id, userId), eq(users.is_demo, currentUser.is_demo)));
 
       for (const otherUser of otherUsers) {
         const existingConversation = await db

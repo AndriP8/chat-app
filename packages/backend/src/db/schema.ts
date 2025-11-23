@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import {
+  boolean,
   index,
   integer,
   pgTable,
@@ -22,11 +23,13 @@ export const users = pgTable(
     password_hash: varchar('password_hash', { length: 255 }).notNull(),
     name: varchar('name', { length: 100 }).notNull(),
     profile_picture_url: varchar('profile_picture_url', { length: 500 }),
+    is_demo: boolean('is_demo').default(false).notNull(),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => ({
     email_idx: index('email_idx').on(table.email),
+    is_demo_idx: index('is_demo_idx').on(table.is_demo),
   })
 );
 
@@ -38,7 +41,7 @@ export const conversations = pgTable(
       .primaryKey(),
     name: varchar('name', { length: 100 }),
     created_by: uuid('created_by')
-      .references(() => users.id)
+      .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull(),

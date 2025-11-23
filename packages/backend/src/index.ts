@@ -8,6 +8,7 @@ import { authRoutes } from '@/routes/auth';
 import { conversationRoutes } from '@/routes/conversations';
 import { healthRoutes } from '@/routes/health';
 import { websocketRoutes } from '@/routes/websocket';
+import { cleanupService } from '@/services/cleanupService';
 
 async function buildServer() {
   const fastify = Fastify({
@@ -71,11 +72,26 @@ async function start() {
     console.log(`🚀 Server running at http://${host}:${port}`);
     console.log(`📊 Health check: http://${host}:${port}/api/health`);
     console.log(`🔌 WebSocket: ws://${host}:${port}/ws`);
+
+    cleanupService.start();
   } catch (err) {
     console.error('Error starting server:', err);
     process.exit(1);
   }
 }
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  cleanupService.stop();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  cleanupService.stop();
+  process.exit(0);
+});
 
 // Start the server
 start();
