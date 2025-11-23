@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, lt } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { conversationParticipants, conversations, db, messages, users } from '@/db';
 import { authMiddleware } from '@/middleware/auth';
@@ -63,72 +63,17 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
       const userId = request.user!.id;
 
       // Get current user to check if they are a demo user
-      const [currentUser] = await db
-        .select({ is_demo: users.is_demo })
-        .from(users)
-        .where(eq(users.id, userId))
+      const [currentUserParticipants] = await db
+        .select()
+        .from(conversationParticipants)
+        .where(eq(conversationParticipants.user_id, userId))
         .limit(1);
 
-      if (!currentUser) {
+      if (!currentUserParticipants) {
         return reply.status(404).send({
           success: false,
           error: 'User not found',
         });
-      }
-
-      const otherUsers = await db
-        .select({
-          id: users.id,
-          email: users.email,
-          name: users.name,
-          profile_picture_url: users.profile_picture_url,
-          created_at: users.created_at,
-          updated_at: users.updated_at,
-        })
-        .from(users)
-        .where(and(ne(users.id, userId), eq(users.is_demo, currentUser.is_demo)));
-
-      for (const otherUser of otherUsers) {
-        const existingConversation = await db
-          .select({ id: conversations.id })
-          .from(conversations)
-          .innerJoin(
-            conversationParticipants,
-            eq(conversations.id, conversationParticipants.conversation_id)
-          )
-          .where(
-            and(
-              eq(conversationParticipants.user_id, userId),
-              sql`${conversations.id} IN (
-                  SELECT conversation_id FROM ${conversationParticipants} 
-                  WHERE user_id = ${otherUser.id}
-                )`
-            )
-          )
-          .limit(1);
-
-        if (existingConversation.length === 0) {
-          const [newConversation] = await db
-            .insert(conversations)
-            .values({
-              name: null, // No name for direct conversations
-              created_by: userId,
-            })
-            .returning();
-
-          if (newConversation) {
-            await db.insert(conversationParticipants).values([
-              {
-                conversation_id: newConversation.id,
-                user_id: userId,
-              },
-              {
-                conversation_id: newConversation.id,
-                user_id: otherUser.id,
-              },
-            ]);
-          }
-        }
       }
 
       const userConversations = await db
@@ -140,11 +85,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           updated_at: conversations.updated_at,
         })
         .from(conversations)
-        .innerJoin(
-          conversationParticipants,
-          eq(conversations.id, conversationParticipants.conversation_id)
-        )
-        .where(eq(conversationParticipants.user_id, userId))
+        .where(eq(conversations.id, currentUserParticipants.conversation_id))
         .orderBy(desc(conversations.updated_at));
 
       const conversationsWithDetails: ConversationResponse[] = [];
