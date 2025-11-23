@@ -58,12 +58,85 @@ function formatMessageResponse(message: MessageDbResult, sender: UserDbResult): 
 
 export async function conversationRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.addHook('preHandler', authMiddleware);
-  fastify.get('/', {
-    handler: async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const userId = request.user!.id;
+  fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const userId = request.user!.id;
 
-        const otherUsers = await db
+      const otherUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          profile_picture_url: users.profile_picture_url,
+          created_at: users.created_at,
+          updated_at: users.updated_at,
+        })
+        .from(users)
+        .where(sql`${users.id} != ${userId}`);
+
+      for (const otherUser of otherUsers) {
+        const existingConversation = await db
+          .select({ id: conversations.id })
+          .from(conversations)
+          .innerJoin(
+            conversationParticipants,
+            eq(conversations.id, conversationParticipants.conversation_id)
+          )
+          .where(
+            and(
+              eq(conversationParticipants.user_id, userId),
+              sql`${conversations.id} IN (
+                  SELECT conversation_id FROM ${conversationParticipants} 
+                  WHERE user_id = ${otherUser.id}
+                )`
+            )
+          )
+          .limit(1);
+
+        if (existingConversation.length === 0) {
+          const [newConversation] = await db
+            .insert(conversations)
+            .values({
+              name: null, // No name for direct conversations
+              created_by: userId,
+            })
+            .returning();
+
+          if (newConversation) {
+            await db.insert(conversationParticipants).values([
+              {
+                conversation_id: newConversation.id,
+                user_id: userId,
+              },
+              {
+                conversation_id: newConversation.id,
+                user_id: otherUser.id,
+              },
+            ]);
+          }
+        }
+      }
+
+      const userConversations = await db
+        .select({
+          id: conversations.id,
+          name: conversations.name,
+          created_by: conversations.created_by,
+          created_at: conversations.created_at,
+          updated_at: conversations.updated_at,
+        })
+        .from(conversations)
+        .innerJoin(
+          conversationParticipants,
+          eq(conversations.id, conversationParticipants.conversation_id)
+        )
+        .where(eq(conversationParticipants.user_id, userId))
+        .orderBy(desc(conversations.updated_at));
+
+      const conversationsWithDetails: ConversationResponse[] = [];
+
+      for (const conversation of userConversations) {
+        const participants = await db
           .select({
             id: users.id,
             email: users.email,
@@ -73,142 +146,68 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
             updated_at: users.updated_at,
           })
           .from(users)
-          .where(sql`${users.id} != ${userId}`);
+          .innerJoin(conversationParticipants, eq(users.id, conversationParticipants.user_id))
+          .where(eq(conversationParticipants.conversation_id, conversation.id));
 
-        for (const otherUser of otherUsers) {
-          const existingConversation = await db
-            .select({ id: conversations.id })
-            .from(conversations)
-            .innerJoin(
-              conversationParticipants,
-              eq(conversations.id, conversationParticipants.conversation_id)
-            )
-            .where(
-              and(
-                eq(conversationParticipants.user_id, userId),
-                sql`${conversations.id} IN (
-                  SELECT conversation_id FROM ${conversationParticipants} 
-                  WHERE user_id = ${otherUser.id}
-                )`
-              )
-            )
-            .limit(1);
-
-          if (existingConversation.length === 0) {
-            const [newConversation] = await db
-              .insert(conversations)
-              .values({
-                name: null, // No name for direct conversations
-                created_by: userId,
-              })
-              .returning();
-
-            if (newConversation) {
-              await db.insert(conversationParticipants).values([
-                {
-                  conversation_id: newConversation.id,
-                  user_id: userId,
-                },
-                {
-                  conversation_id: newConversation.id,
-                  user_id: otherUser.id,
-                },
-              ]);
-            }
-          }
-        }
-
-        const userConversations = await db
+        const [lastMessageData] = await db
           .select({
-            id: conversations.id,
-            name: conversations.name,
-            created_by: conversations.created_by,
-            created_at: conversations.created_at,
-            updated_at: conversations.updated_at,
-          })
-          .from(conversations)
-          .innerJoin(
-            conversationParticipants,
-            eq(conversations.id, conversationParticipants.conversation_id)
-          )
-          .where(eq(conversationParticipants.user_id, userId))
-          .orderBy(desc(conversations.updated_at));
-
-        const conversationsWithDetails: ConversationResponse[] = [];
-
-        for (const conversation of userConversations) {
-          const participants = await db
-            .select({
+            message: {
+              id: messages.id,
+              content: messages.content,
+              status: messages.status,
+              sender_id: messages.sender_id,
+              sequence_number: messages.sequence_number,
+              conversation_id: messages.conversation_id,
+              created_at: messages.created_at,
+              updated_at: messages.updated_at,
+            },
+            sender: {
               id: users.id,
               email: users.email,
               name: users.name,
               profile_picture_url: users.profile_picture_url,
               created_at: users.created_at,
               updated_at: users.updated_at,
-            })
-            .from(users)
-            .innerJoin(conversationParticipants, eq(users.id, conversationParticipants.user_id))
-            .where(eq(conversationParticipants.conversation_id, conversation.id));
+            },
+          })
+          .from(messages)
+          .innerJoin(users, eq(messages.sender_id, users.id))
+          .where(eq(messages.conversation_id, conversation.id))
+          .orderBy(desc(messages.created_at))
+          .limit(1);
 
-          const [lastMessageData] = await db
-            .select({
-              message: {
-                id: messages.id,
-                content: messages.content,
-                status: messages.status,
-                sender_id: messages.sender_id,
-                sequence_number: messages.sequence_number,
-                conversation_id: messages.conversation_id,
-                created_at: messages.created_at,
-                updated_at: messages.updated_at,
-              },
-              sender: {
-                id: users.id,
-                email: users.email,
-                name: users.name,
-                profile_picture_url: users.profile_picture_url,
-                created_at: users.created_at,
-                updated_at: users.updated_at,
-              },
-            })
-            .from(messages)
-            .innerJoin(users, eq(messages.sender_id, users.id))
-            .where(eq(messages.conversation_id, conversation.id))
-            .orderBy(desc(messages.created_at))
-            .limit(1);
-
-          conversationsWithDetails.push({
-            id: conversation.id,
-            name: conversation.name,
-            created_by: conversation.created_by,
-            created_at: conversation.created_at,
-            updated_at: conversation.updated_at,
-            participants: participants.map(formatUserResponse),
-            last_message: lastMessageData
-              ? formatMessageResponse(
-                  lastMessageData.message as MessageDbResult,
-                  lastMessageData.sender
-                )
-              : null,
-          });
-        }
-
-        return reply.send({
-          success: true,
-          data: conversationsWithDetails,
-        });
-      } catch (error) {
-        console.error('Get conversations error:', error);
-        return reply.status(500).send({
-          success: false,
-          error: 'Failed to fetch conversations',
+        conversationsWithDetails.push({
+          id: conversation.id,
+          name: conversation.name,
+          created_by: conversation.created_by,
+          created_at: conversation.created_at,
+          updated_at: conversation.updated_at,
+          participants: participants.map(formatUserResponse),
+          last_message: lastMessageData
+            ? formatMessageResponse(
+                lastMessageData.message as MessageDbResult,
+                lastMessageData.sender
+              )
+            : null,
         });
       }
-    },
+
+      return reply.send({
+        success: true,
+        data: conversationsWithDetails,
+      });
+    } catch (error) {
+      console.error('Get conversations error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch conversations',
+      });
+    }
   });
 
-  fastify.get('/:id/messages', {
-    handler: async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  fastify.get(
+    '/:id/messages',
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
       try {
         const conversationId = request.params.id;
         const userId = request.user!.id;
@@ -299,6 +298,6 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           error: 'Failed to fetch messages',
         });
       }
-    },
-  });
+    }
+  );
 }

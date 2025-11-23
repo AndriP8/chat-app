@@ -24,7 +24,7 @@ export async function healthRoutes(fastify: FastifyInstance) {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      reply.code(503);
+      reply.status(503);
       return {
         status: 'error',
         database: 'disconnected',

@@ -51,8 +51,8 @@ async function buildServer() {
 
     reply.status(500).send({
       success: false,
-      error: isDevelopment ? error.message : 'Internal Server Error',
-      ...(isDevelopment && { stack: error.stack }),
+      error: isDevelopment && error instanceof Error ? error.message : 'Internal Server Error',
+      ...(isDevelopment && error instanceof Error && { stack: error.stack }),
     });
   });
 
