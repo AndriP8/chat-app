@@ -4,6 +4,7 @@ export interface User {
   password_hash?: string;
   name: string;
   profile_picture_url?: string;
+  is_demo?: boolean;
   created_at: Date;
   updated_at: Date;
 }

@@ -1,18 +1,27 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { AuthProvider } from '@/components/auth/AuthContext';
-import { AuthPage } from '@/components/auth/AuthPage';
-import ChatPage from './components/chat/ChatPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Navigation } from './components/navigation/Navigation';
+
+const LoadingSpinner = () => (
+  <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex items-center gap-2 text-gray-500">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
+      <span>Loading...</span>
+    </div>
+  </div>
+);
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="App">
+        <div className="w-full">
+          <Suspense fallback={<LoadingSpinner />}>
           <Routes>
-            {/* Default redirect to chat */}
-            <Route path="/" element={<Navigate to="/chat" replace />} />
+              {/* Landing Page */}
+              <Route path="/" element={<HomePage />} />
 
             {/* Auth Routes */}
             <Route path="/login" element={<AuthPage initialMode="login" />} />
@@ -32,6 +41,7 @@ function App() {
               }
             />
           </Routes>
+          </Suspense>
         </div>
       </Router>
     </AuthProvider>

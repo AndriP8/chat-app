@@ -21,9 +21,7 @@ export async function makeRequest<T>(endpoint: string, options: RequestInit = {}
   const url = `${API_BASE_URL}${endpoint}`;
 
   // Default headers
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
 
   // Add existing headers
   if (options.headers) {

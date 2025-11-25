@@ -89,26 +89,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login' }) => 
             <RegisterForm onSwitchToLogin={switchToLogin} onRegisterSuccess={handleAuthSuccess} />
           )}
         </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-gray-500 text-xs dark:text-gray-400">
-            By continuing, you agree to our{' '}
-            <button
-              type="button"
-              className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              Terms of Service
-            </button>{' '}
-            and{' '}
-            <button
-              type="button"
-              className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              Privacy Policy
-            </button>
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -1,6 +1,11 @@
 import { type LoginInput, loginSchema, type RegisterInput, registerSchema } from '@/schemas/auth';
 import { makeRequest } from './base';
-import type { AuthResponse, MessageResponse, UserResponse } from './types/auth';
+import type {
+  AuthResponse,
+  DemoUsersResponse,
+  MessageResponse,
+  UserResponse,
+} from './types/auth';
 
 /**
  * Authentication API endpoints
@@ -16,6 +21,9 @@ export const authApi = {
     return makeRequest<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(validatedData),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
   },
 
@@ -29,6 +37,9 @@ export const authApi = {
     return makeRequest<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(validatedData),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
   },
 
@@ -44,6 +55,15 @@ export const authApi = {
    */
   async logout(): Promise<MessageResponse> {
     return makeRequest<MessageResponse>('/auth/logout', {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Generate demo user pair
+   */
+  async generateDemoUser(): Promise<DemoUsersResponse> {
+    return makeRequest<DemoUsersResponse>('/auth/demo-user', {
       method: 'POST',
     });
   },
