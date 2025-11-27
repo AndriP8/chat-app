@@ -14,25 +14,18 @@ import type { User } from '@/types';
 import { getErrorMessage, secureStorage } from '@/utils/helpers';
 
 interface AuthContextType {
-  // State
   authState: AuthState;
-  // Actions
   login: (credentials: LoginInput) => Promise<void>;
   register: (userData: RegisterInput) => Promise<void>;
   logout: () => void;
   clearError: () => void;
-  // Computed values
   isAuthenticated: boolean;
   currentUser: User | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [authState, dispatch] = useReducer(authReducer, loadPersistedAuthState());
 
   const login = useCallback(async (loginData: LoginInput): Promise<void> => {
@@ -123,15 +116,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (authState.isAuthenticated && authState.user) {
       const initializeSync = async () => {
         try {
-          if (authState.user) {
-            await initializeDataSync({
-              maxRetries: 3,
-              baseDelayMs: 1000,
-              maxDelayMs: 30000,
-              processingIntervalMs: 5000,
-              currentUserId: authState.user.id,
-            });
-          }
+          await initializeDataSync({
+            maxRetries: 3,
+            baseDelayMs: 1000,
+            maxDelayMs: 30000,
+            currentUserId: authState.user!.id,
+          });
         } catch (error) {
           console.error('Failed to initialize data synchronization:', error);
         }
@@ -141,17 +131,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authState.isAuthenticated, authState.user]);
 
-  const isAuthenticated = authState.isAuthenticated;
-  const currentUser = authState.user;
-
   const contextValue: AuthContextType = {
     authState,
     login,
     register,
     logout,
     clearError,
-    isAuthenticated,
-    currentUser,
+    isAuthenticated: authState.isAuthenticated,
+    currentUser: authState.user,
   };
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

@@ -16,14 +16,7 @@ export type AuthAction =
   | { type: 'AUTH_REGISTER_SUCCESS'; payload: { user: User } }
   | { type: 'AUTH_REGISTER_FAILURE'; payload: { error: string } }
   | { type: 'AUTH_LOGOUT' }
-  | { type: 'AUTH_UPDATE_USER'; payload: { updates: Partial<User> } }
   | { type: 'AUTH_CLEAR_ERROR' }
-  | { type: 'AUTH_UPDATE_PROFILE_START' }
-  | { type: 'AUTH_UPDATE_PROFILE_SUCCESS'; payload: { user: User } }
-  | { type: 'AUTH_UPDATE_PROFILE_FAILURE'; payload: { error: string } }
-  | { type: 'AUTH_CHANGE_PASSWORD_START' }
-  | { type: 'AUTH_CHANGE_PASSWORD_SUCCESS' }
-  | { type: 'AUTH_CHANGE_PASSWORD_FAILURE'; payload: { error: string } }
   | { type: 'SET_USER_DATA'; payload: { user: User } };
 
 const initialAuthState: AuthState = {
@@ -79,8 +72,6 @@ export const authReducer = (state: AuthState, action: AuthAction): AuthState => 
   switch (action.type) {
     case 'AUTH_LOGIN_START':
     case 'AUTH_REGISTER_START':
-    case 'AUTH_UPDATE_PROFILE_START':
-    case 'AUTH_CHANGE_PASSWORD_START':
       return {
         ...state,
         isLoading: true,
@@ -103,9 +94,7 @@ export const authReducer = (state: AuthState, action: AuthAction): AuthState => 
     }
 
     case 'AUTH_LOGIN_FAILURE':
-    case 'AUTH_REGISTER_FAILURE':
-    case 'AUTH_UPDATE_PROFILE_FAILURE':
-    case 'AUTH_CHANGE_PASSWORD_FAILURE': {
+    case 'AUTH_REGISTER_FAILURE': {
       // Clear any persisted auth data on failure
       secureStorage.remove('minimalUserData');
 
@@ -136,55 +125,6 @@ export const authReducer = (state: AuthState, action: AuthAction): AuthState => 
         ...state,
         error: null,
       };
-
-    case 'AUTH_UPDATE_USER': {
-      if (!state.user) {
-        return state;
-      }
-
-      const updatedUser = {
-        ...state.user,
-        ...action.payload.updates,
-      };
-
-      // Update minimal user data in storage
-      const minimalUserData = createMinimalUserData(updatedUser);
-      secureStorage.set('minimalUserData', minimalUserData);
-
-      return {
-        ...state,
-        user: updatedUser,
-        isLoading: false,
-        error: null,
-      };
-    }
-
-    case 'AUTH_UPDATE_PROFILE_SUCCESS': {
-      if (!state.user) {
-        return state;
-      }
-
-      const updatedUser = action.payload.user;
-
-      // Update minimal user data in storage
-      const minimalUserData = createMinimalUserData(updatedUser);
-      secureStorage.set('minimalUserData', minimalUserData);
-
-      return {
-        ...state,
-        user: updatedUser,
-        isLoading: false,
-        error: null,
-      };
-    }
-
-    case 'AUTH_CHANGE_PASSWORD_SUCCESS': {
-      return {
-        ...state,
-        isLoading: false,
-        error: null,
-      };
-    }
 
     case 'SET_USER_DATA': {
       // Store minimal user data in session storage
