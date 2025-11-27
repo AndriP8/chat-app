@@ -99,7 +99,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (authState.isAuthenticated) {
       const validateAuth = async () => {
         try {
-          await authApi.getCurrentUser();
+          const { data } = await authApi.getCurrentUser();
+          dispatch({ type: 'SET_USER_DATA', payload: { user: data.user } });
         } catch (error) {
           if (error instanceof ApiError && error.status === 401) {
             secureStorage.remove('minimalUserData');

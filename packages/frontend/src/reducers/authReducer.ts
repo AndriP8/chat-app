@@ -23,7 +23,8 @@ export type AuthAction =
   | { type: 'AUTH_UPDATE_PROFILE_FAILURE'; payload: { error: string } }
   | { type: 'AUTH_CHANGE_PASSWORD_START' }
   | { type: 'AUTH_CHANGE_PASSWORD_SUCCESS' }
-  | { type: 'AUTH_CHANGE_PASSWORD_FAILURE'; payload: { error: string } };
+  | { type: 'AUTH_CHANGE_PASSWORD_FAILURE'; payload: { error: string } }
+  | { type: 'SET_USER_DATA'; payload: { user: User } };
 
 const initialAuthState: AuthState = {
   user: null,
@@ -62,6 +63,7 @@ interface MinimalUserData {
   id: string;
   name: string;
   profilePictureUrl?: string;
+  is_demo?: boolean;
 }
 
 export function createMinimalUserData(user: User): MinimalUserData {
@@ -69,6 +71,7 @@ export function createMinimalUserData(user: User): MinimalUserData {
     id: user.id,
     name: user.name,
     profilePictureUrl: user.profile_picture_url,
+    is_demo: user.is_demo,
   };
 }
 
@@ -183,6 +186,19 @@ export const authReducer = (state: AuthState, action: AuthAction): AuthState => 
       };
     }
 
+    case 'SET_USER_DATA': {
+      // Store minimal user data in session storage
+      const minimalUserData = createMinimalUserData(action.payload.user);
+      secureStorage.set('minimalUserData', minimalUserData);
+
+      return {
+        ...state,
+        user: action.payload.user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      };
+    }
     default:
       return state;
   }
