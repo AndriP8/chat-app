@@ -2,6 +2,16 @@ import { ensureDate } from '@/utils/helpers';
 import type { Message, SendMessageRequest } from '../types/database';
 import { dbOps } from './databaseOperations';
 
+// Type definitions for Background Sync API
+interface SyncManager {
+  getTags(): Promise<string[]>;
+  register(tag: string): Promise<void>;
+}
+
+interface ExtendedServiceWorkerRegistration extends ServiceWorkerRegistration {
+  sync: SyncManager;
+}
+
 interface SchedulerConfig {
   maxRetries: number;
   baseDelayMs: number;
@@ -30,6 +40,24 @@ export class MessageScheduler {
 
   constructor(config: Partial<SchedulerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.setupServiceWorkerSync();
+  }
+
+  /**
+   * Setup listener for service worker background sync
+   */
+  private setupServiceWorkerSync(): void {
+    if (!('serviceWorker' in navigator)) {
+      return;
+    }
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data.type === 'SYNC_MESSAGES') {
+        this.processQueue().catch((error) => {
+          console.error('[MessageScheduler] Error processing queue from sync event:', error);
+        });
+      }
+    });
   }
 
   /**
@@ -116,6 +144,23 @@ export class MessageScheduler {
         status: 'pending',
         retry_count: 0,
       });
+
+      // Request background sync if available
+      if (
+        'serviceWorker' in navigator &&
+        'sync' in ServiceWorkerRegistration.prototype &&
+        navigator.serviceWorker.ready
+      ) {
+        try {
+          const registration = (await navigator.serviceWorker
+            .ready) as ExtendedServiceWorkerRegistration;
+          if ('sync' in registration) {
+            await registration.sync.register('sync-messages');
+          }
+        } catch (error) {
+          console.warn('[MessageScheduler] Background sync not available:', error);
+        }
+      }
 
       // Trigger immediate processing if not already running
       if (!this.isProcessing) {

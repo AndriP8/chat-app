@@ -3,6 +3,8 @@ import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { AuthProvider } from '@/components/auth/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Navigation } from './components/navigation/Navigation';
+import { InstallPrompt } from './components/pwa/InstallPrompt';
+import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 
 const LoadingSpinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -42,6 +44,8 @@ function App() {
             />
           </Routes>
           </Suspense>
+          <InstallPrompt />
+          <ReloadPrompt />
         </div>
       </Router>
     </AuthProvider>

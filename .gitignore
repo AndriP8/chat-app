@@ -19,7 +19,13 @@ dist-ssr
 *.sln
 *.sw?
 
-# AI 
+# AI
 CLAUDE.md
 .mcp.json
 .github
+
+# PWA generated files
+packages/frontend/dev-dist/
+packages/frontend/dist/sw.js
+packages/frontend/dist/workbox-*.js
+packages/frontend/dist/manifest.webmanifest
