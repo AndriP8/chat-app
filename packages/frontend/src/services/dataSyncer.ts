@@ -205,9 +205,6 @@ export class DataSyncer {
    * Load conversations from local database with fallback to server
    */
   async loadConversations(userId: string): Promise<ChatRoom[]> {
-    if (!this.webSocketService) {
-      throw new Error('WebSocket service not available');
-    }
     try {
       const localConversations = await dbOps.getUserConversations(userId);
 
@@ -276,7 +273,7 @@ export class DataSyncer {
                 created_at: conversation.last_message.created_at,
                 updated_at: conversation.last_message.updated_at,
               });
-              this.webSocketService.markMessageDelivered(
+              this.webSocketService?.markMessageDelivered(
                 conversation.last_message.id,
                 conversation.id
               );

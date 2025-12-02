@@ -145,7 +145,7 @@ export const DemoCredentialCard = ({ users, password, onClose }: DemoCredentialC
             stroke="currentColor"
             viewBox="0 0 24 24"
             role="img"
-            aria-label="asd"
+            aria-label="lightbulb tip icon"
           >
             <path
               strokeLinecap="round"

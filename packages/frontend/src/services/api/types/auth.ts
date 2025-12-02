@@ -22,7 +22,9 @@ export interface DemoUsersResponse {
 }
 
 export interface UserResponse {
-  user: User;
+  data: {
+    user: User;
+  };
 }
 
 export interface MessageResponse {

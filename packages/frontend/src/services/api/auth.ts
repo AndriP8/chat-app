@@ -1,11 +1,6 @@
 import { type LoginInput, loginSchema, type RegisterInput, registerSchema } from '@/schemas/auth';
 import { makeRequest } from './base';
-import type {
-  AuthResponse,
-  DemoUsersResponse,
-  MessageResponse,
-  UserResponse,
-} from './types/auth';
+import type { AuthResponse, DemoUsersResponse, MessageResponse, UserResponse } from './types/auth';
 
 /**
  * Authentication API endpoints
