@@ -68,14 +68,13 @@ export class DatabaseOperations {
     conversationId: string
   ): Promise<(Message & { sender: User }) | null> {
     try {
-      // Get all messages for these conversations in one query, sorted by created_at desc
+      // Get all messages for this conversation, sorted by created_at ascending
       const allMessages = await db.messages
         .where('conversation_id')
         .equals(conversationId)
-        .reverse()
         .sortBy('created_at');
 
-      const lastMessage = allMessages[0];
+      const lastMessage = allMessages[allMessages.length - 1];
       if (!lastMessage) {
         return null;
       }
