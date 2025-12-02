@@ -57,23 +57,12 @@ export const HomePage = () => {
             <span className="font-bold text-gray-900 text-xl dark:text-white">ChatApp</span>
           </div>
           <nav className="flex gap-3">
-            {import.meta.env.DEV ? (
-              <a
-                href="/login"
-                className="rounded-lg px-4 py-2 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-              >
-                Login
-              </a>
-            ) : (
-              <a
-                href={`https://github.com/${import.meta.env.VITE_GITHUB_USERNAME}/chat-app`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg bg-gray-800 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600"
-              >
-                View on GitHub
-              </a>
-            )}
+            <a
+              href="/login"
+              className="rounded-lg px-4 py-2 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Login
+            </a>
           </nav>
         </div>
       </header>
