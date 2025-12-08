@@ -2,9 +2,12 @@ import { Suspense } from 'react';
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { AuthProvider } from '@/components/auth/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
+import { AuthPage } from './components/auth/AuthPage';
+import ChatPage from './components/chat/ChatPage';
 import { Navigation } from './components/navigation/Navigation';
 import { InstallPrompt } from './components/pwa/InstallPrompt';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
+import { HomePage } from './pages/HomePage';
 
 const LoadingSpinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -21,28 +24,28 @@ function App() {
       <Router>
         <div className="w-full">
           <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
+            <Routes>
               {/* Landing Page */}
               <Route path="/" element={<HomePage />} />
 
-            {/* Auth Routes */}
-            <Route path="/login" element={<AuthPage initialMode="login" />} />
-            <Route path="/register" element={<AuthPage initialMode="register" />} />
-            <Route path="/auth" element={<AuthPage />} />
+              {/* Auth Routes */}
+              <Route path="/login" element={<AuthPage initialMode="login" />} />
+              <Route path="/register" element={<AuthPage initialMode="register" />} />
+              <Route path="/auth" element={<AuthPage />} />
 
-            {/* Protected Routes */}
-            <Route
-              path="/chat"
-              element={
-                <AuthGuard>
-                  <div className="min-h-screen bg-gray-50">
-                    <Navigation />
-                    <ChatPage />
-                  </div>
-                </AuthGuard>
-              }
-            />
-          </Routes>
+              {/* Protected Routes */}
+              <Route
+                path="/chat"
+                element={
+                  <AuthGuard>
+                    <div className="min-h-screen bg-gray-50">
+                      <Navigation />
+                      <ChatPage />
+                    </div>
+                  </AuthGuard>
+                }
+              />
+            </Routes>
           </Suspense>
           <InstallPrompt />
           <ReloadPrompt />
