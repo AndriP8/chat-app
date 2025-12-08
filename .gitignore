@@ -22,10 +22,29 @@ dist-ssr
 # AI
 CLAUDE.md
 .mcp.json
-.github
 
 # PWA generated files
 packages/frontend/dev-dist/
 packages/frontend/dist/sw.js
 packages/frontend/dist/workbox-*.js
 packages/frontend/dist/manifest.webmanifest
+
+# Docker
+docker-compose.override.yml
+.env.local
+.env.docker
+
+# Environment files (sensitive data)
+.env
+*.env
+!*.env.example
+
+# Deployment artifacts
+backups/
+logs/
+*.log.*
+deployment/nginx/ssl/*.pem
+deployment/nginx/ssl/*.key
+.env.prod
+deployment/backups/*
+deployment/logs/*

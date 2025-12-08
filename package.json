@@ -11,7 +11,13 @@
     "build": "pnpm run --recursive build",
     "lint": "pnpm run --recursive lint",
     "format": "pnpm run --recursive format",
-    "type-check": "pnpm run --recursive type-check"
+    "type-check": "pnpm run --recursive type-check",
+    "db:start": "docker compose up -d postgres",
+    "db:stop": "docker compose down",
+    "db:restart": "docker compose restart postgres",
+    "db:logs": "docker compose logs -f postgres",
+    "db:reset": "docker compose down -v && docker compose up -d postgres",
+    "db:shell": "bash scripts/docker-db-shell.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.6",

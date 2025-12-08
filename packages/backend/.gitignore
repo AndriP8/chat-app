@@ -36,8 +36,8 @@ coverage/
 # Optional eslint cache
 .eslintcache
 
-# Drizzle
-drizzle/
+# Drizzle (migrations should be committed)
+# drizzle/
 
 # IDE
 .vscode/
