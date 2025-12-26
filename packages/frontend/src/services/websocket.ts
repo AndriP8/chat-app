@@ -94,7 +94,7 @@ export class WebSocketService {
   private joinedConversations = new Set<string>();
   baseUrl: string;
 
-  constructor(baseUrl = 'ws://localhost:3001') {
+  constructor(baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001') {
     this.baseUrl = baseUrl;
   }
 
