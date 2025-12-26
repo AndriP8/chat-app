@@ -6,7 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import jwt from 'jsonwebtoken';
 import { envConfig } from '@/config/env';
 import { conversationParticipants, conversations, db, type User, users } from '@/db';
-import { loginSchema, registerSchema, type UserResponse } from '@/schemas/auth';
+import { loginSchema, type UserResponse } from '@/schemas/auth';
 
 // JWT utilities
 const JWT_SECRET = envConfig.JWT_SECRET;
@@ -51,72 +51,6 @@ function formatUserResponse(user: User): UserResponse {
 }
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
-  // Register endpoint
-  fastify.post('/register', async (request, reply) => {
-    try {
-      const { success, data, error } = registerSchema.safeParse(request.body);
-      if (!success) {
-        return reply.status(400).send({
-          success: false,
-          error: 'Validation failed',
-          details: error.flatten().fieldErrors,
-        });
-      }
-      const { email, password, name, profilePictureUrl } = data;
-
-      const [existingUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-
-      if (existingUser) {
-        return reply.status(409).send({
-          success: false,
-          error: 'User with this email already exists',
-        });
-      }
-
-      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-
-      // Create user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          email,
-          password_hash: passwordHash,
-          name,
-          profile_picture_url: profilePictureUrl || null,
-        })
-        .returning();
-
-      if (!newUser) {
-        return reply.status(500).send({
-          success: false,
-          error: 'Failed to create user',
-        });
-      }
-
-      const token = generateToken({
-        user_id: newUser.id,
-        email: newUser.email,
-      });
-
-      reply.setCookie(COOKIE_CONFIG.AUTH_TOKEN, token, COOKIE_CONFIG.OPTIONS);
-
-      const response = {
-        user: formatUserResponse(newUser),
-      };
-
-      return reply.status(201).send({
-        success: true,
-        data: response,
-      });
-    } catch (error) {
-      console.error('Registration error:', error);
-      return reply.status(500).send({
-        success: false,
-        error: 'Registration failed',
-      });
-    }
-  });
-
   // Login endpoint
   fastify.post('/login', async (request, reply) => {
     try {

@@ -2,16 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { LoginForm } from './LoginForm';
-import { RegisterForm } from './RegisterForm';
 
-type AuthMode = 'login' | 'register';
-
-interface AuthPageProps {
-  initialMode?: AuthMode;
-}
-
-export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login' }) => {
-  const [mode, setMode] = useState<AuthMode>(initialMode);
+export const AuthPage: React.FC = () => {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,14 +26,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login' }) => 
       navigate(from, { replace: true });
     }, 500);
   }, [navigate, location.state]);
-
-  const switchToLogin = useCallback(() => {
-    setMode('login');
-  }, []);
-
-  const switchToRegister = useCallback(() => {
-    setMode('register');
-  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 p-4 dark:from-gray-900 dark:to-gray-800">
@@ -83,11 +67,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode = 'login' }) => 
 
         {/* Auth Forms */}
         <div className="transition-all duration-300 ease-in-out">
-          {mode === 'login' ? (
-            <LoginForm onSwitchToRegister={switchToRegister} onLoginSuccess={handleAuthSuccess} />
-          ) : (
-            <RegisterForm onSwitchToLogin={switchToLogin} onRegisterSuccess={handleAuthSuccess} />
-          )}
+          <LoginForm onLoginSuccess={handleAuthSuccess} />
         </div>
       </div>
     </div>

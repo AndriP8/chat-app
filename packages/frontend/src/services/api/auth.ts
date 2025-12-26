@@ -1,4 +1,4 @@
-import { type LoginInput, loginSchema, type RegisterInput, registerSchema } from '@/schemas/auth';
+import { type LoginInput, loginSchema } from '@/schemas/auth';
 import { makeRequest } from './base';
 import type { AuthResponse, DemoUsersResponse, MessageResponse, UserResponse } from './types/auth';
 
@@ -6,22 +6,6 @@ import type { AuthResponse, DemoUsersResponse, MessageResponse, UserResponse } f
  * Authentication API endpoints
  */
 export const authApi = {
-  /**
-   * Register a new user
-   */
-  async register(userData: RegisterInput): Promise<AuthResponse> {
-    // Validate input data
-    const validatedData = registerSchema.parse(userData);
-
-    return makeRequest<AuthResponse>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(validatedData),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  },
-
   /**
    * Login user
    */

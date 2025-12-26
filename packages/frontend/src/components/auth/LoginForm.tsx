@@ -1,5 +1,6 @@
 import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 import { type FormEvent, useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ZodError } from 'zod';
 import { type LoginInput, loginSchema } from '@/schemas/auth';
 import type { ValidationError } from '@/types';
@@ -7,11 +8,10 @@ import { getErrorMessage } from '@/utils/helpers';
 import { useAuth } from './AuthContext';
 
 interface LoginFormProps {
-  onSwitchToRegister?: () => void;
   onLoginSuccess?: () => void;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onLoginSuccess }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const { login, authState, clearError } = useAuth();
   const [formData, setFormData] = useState<LoginInput>({
     email: '',
@@ -197,7 +197,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onLogi
           <button
             type="submit"
             disabled={isSubmitting || authState.isLoading}
-            className="flex w-full items-center justify-center rounded-lg border border-transparent bg-blue-600 px-4 py-3 font-medium text-sm text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 "
+            className="flex w-full items-center justify-center rounded-lg border border-transparent bg-blue-600 px-4 py-3 font-medium text-sm text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting || authState.isLoading ? (
               <>
@@ -210,22 +210,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onLogi
           </button>
         </form>
 
-        {/* Register Link */}
-        {onSwitchToRegister && (
-          <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm dark:text-gray-400">
-              Don&apos;t have an account?{' '}
-              <button
-                type="button"
-                onClick={onSwitchToRegister}
-                className="font-medium text-blue-600 transition-colors hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
-                disabled={isSubmitting}
-              >
-                Create one here
-              </button>
-            </p>
-          </div>
-        )}
+        {/* Demo Account Link */}
+        <div className="mt-6 text-center">
+          <p className="text-gray-600 text-sm dark:text-gray-400">
+            Don&apos;t have an account?{' '}
+            <Link
+              to="/"
+              className="font-medium text-blue-600 transition-colors hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              Generate demo accounts
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

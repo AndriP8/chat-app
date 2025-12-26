@@ -12,9 +12,6 @@ export type AuthAction =
   | { type: 'AUTH_LOGIN_START' }
   | { type: 'AUTH_LOGIN_SUCCESS'; payload: { user: User } }
   | { type: 'AUTH_LOGIN_FAILURE'; payload: { error: string } }
-  | { type: 'AUTH_REGISTER_START' }
-  | { type: 'AUTH_REGISTER_SUCCESS'; payload: { user: User } }
-  | { type: 'AUTH_REGISTER_FAILURE'; payload: { error: string } }
   | { type: 'AUTH_LOGOUT' }
   | { type: 'AUTH_CLEAR_ERROR' }
   | { type: 'SET_USER_DATA'; payload: { user: User } };
@@ -71,15 +68,13 @@ export function createMinimalUserData(user: User): MinimalUserData {
 export const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
     case 'AUTH_LOGIN_START':
-    case 'AUTH_REGISTER_START':
       return {
         ...state,
         isLoading: true,
         error: null,
       };
 
-    case 'AUTH_LOGIN_SUCCESS':
-    case 'AUTH_REGISTER_SUCCESS': {
+    case 'AUTH_LOGIN_SUCCESS': {
       // Store minimal user data in session storage
       const minimalUserData = createMinimalUserData(action.payload.user);
       secureStorage.set('minimalUserData', minimalUserData);
@@ -93,8 +88,7 @@ export const authReducer = (state: AuthState, action: AuthAction): AuthState => 
       };
     }
 
-    case 'AUTH_LOGIN_FAILURE':
-    case 'AUTH_REGISTER_FAILURE': {
+    case 'AUTH_LOGIN_FAILURE': {
       // Clear any persisted auth data on failure
       secureStorage.remove('minimalUserData');
 

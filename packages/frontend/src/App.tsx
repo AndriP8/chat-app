@@ -29,8 +29,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
 
               {/* Auth Routes */}
-              <Route path="/login" element={<AuthPage initialMode="login" />} />
-              <Route path="/register" element={<AuthPage initialMode="register" />} />
+              <Route path="/login" element={<AuthPage />} />
               <Route path="/auth" element={<AuthPage />} />
 
               {/* Protected Routes */}

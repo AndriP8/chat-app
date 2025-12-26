@@ -20,7 +20,7 @@
     "db:shell": "bash scripts/docker-db-shell.sh"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.0.6",
+    "@biomejs/biome": "^2.3.10",
     "typescript": "^5.5.4"
   },
   "engines": {

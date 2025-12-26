@@ -7,7 +7,7 @@ import {
   useReducer,
 } from 'react';
 import { type AuthState, authReducer, loadPersistedAuthState } from '@/reducers/authReducer';
-import type { LoginInput, RegisterInput } from '@/schemas/auth';
+import type { LoginInput } from '@/schemas/auth';
 import { clearAllLocalData, initializeDataSync, shutdownDataSync } from '@/services';
 import { ApiError, authApi } from '@/services/api';
 import type { User } from '@/types';
@@ -16,7 +16,6 @@ import { getErrorMessage, secureStorage } from '@/utils/helpers';
 interface AuthContextType {
   authState: AuthState;
   login: (credentials: LoginInput) => Promise<void>;
-  register: (userData: RegisterInput) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   isAuthenticated: boolean;
@@ -42,26 +41,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const errorMessage = getErrorMessage(error);
       dispatch({
         type: 'AUTH_LOGIN_FAILURE',
-        payload: { error: errorMessage },
-      });
-      throw error;
-    }
-  }, []);
-
-  const register = useCallback(async (userData: RegisterInput): Promise<void> => {
-    dispatch({ type: 'AUTH_REGISTER_START' });
-
-    try {
-      const response = await authApi.register(userData);
-
-      dispatch({
-        type: 'AUTH_REGISTER_SUCCESS',
-        payload: { user: response.data.user },
-      });
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      dispatch({
-        type: 'AUTH_REGISTER_FAILURE',
         payload: { error: errorMessage },
       });
       throw error;
@@ -134,7 +113,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const contextValue: AuthContextType = {
     authState,
     login,
-    register,
     logout,
     clearError,
     isAuthenticated: authState.isAuthenticated,
