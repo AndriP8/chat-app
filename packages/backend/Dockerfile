@@ -1,30 +1,30 @@
 # Build stage
 FROM node:22-alpine AS builder
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@8 --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 
-# Set working directory
 WORKDIR /app
 
 # Copy workspace configuration
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY packages/backend/package.json ./packages/backend/
+COPY packages/backend/tsconfig.json ./packages/backend/
 
-# Install dependencies (includes drizzle-kit for migrations)
+# Install dependencies
 RUN pnpm install --frozen-lockfile --filter @chat-app/backend
 
 # Copy backend source code
-COPY packages/backend ./packages/backend
+COPY packages/backend/src ./packages/backend/src
+COPY packages/backend/drizzle.config.ts ./packages/backend/
 
 # Build backend
-RUN cd packages/backend && pnpm build
+RUN pnpm --filter @chat-app/backend build
 
 # Production stage
 FROM node:22-alpine
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@8 --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 
 # Set working directory
 WORKDIR /app
@@ -33,9 +33,8 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/backend/package.json ./packages/backend/
 
-# Install production dependencies + drizzle-kit for migrations
-RUN pnpm install --frozen-lockfile --filter @chat-app/backend --prod
-RUN pnpm add -w drizzle-kit
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod --filter @chat-app/backend
 
 # Copy built application
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
@@ -43,10 +42,17 @@ COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
 # Copy database migrations and configuration
 COPY packages/backend/drizzle ./packages/backend/drizzle
 COPY packages/backend/drizzle.config.ts ./packages/backend/
-COPY packages/backend/src/db ./packages/backend/src/db
 
-# Create logs directory
-RUN mkdir -p /app/logs
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
+
+# Create logs directory and set ownership
+RUN mkdir -p /app/logs && \
+    chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
 
 # Set environment
 ENV NODE_ENV=production

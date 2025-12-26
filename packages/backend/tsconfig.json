@@ -4,7 +4,7 @@
     "outDir": "./dist",
     "module": "ESNext",
     "target": "ES2022",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowImportingTsExtensions": false,
     "noEmit": false,
     "declaration": true,

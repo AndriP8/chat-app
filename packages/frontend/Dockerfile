@@ -2,7 +2,7 @@
 FROM node:22-alpine AS builder
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@8 --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 
 # Set working directory
 WORKDIR /app
@@ -24,9 +24,6 @@ ARG VITE_WS_URL
 # Set environment variables for Vite build
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ENV VITE_WS_URL=${VITE_WS_URL}
-
-# Generate PWA icons
-RUN cd packages/frontend && node scripts/generate-icons.mjs
 
 # Build frontend with environment variables
 RUN cd packages/frontend && pnpm build
