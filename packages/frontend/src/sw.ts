@@ -1,7 +1,6 @@
 /// <reference lib="webworker" />
 
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
-import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
 import {
   cleanupOutdatedCaches,
@@ -20,10 +19,6 @@ declare const self: ServiceWorkerGlobalScope;
 
 // self.__WB_MANIFEST is default injection point
 precacheAndRoute(self.__WB_MANIFEST);
-
-cleanupOutdatedCaches();
-
-clientsClaim();
 
 registerRoute(
   ({ request, url }: { request: Request; url: URL }) =>
@@ -76,8 +71,17 @@ async function syncMessages() {
   }
 }
 
-self.addEventListener('install', () => {
-  self.skipWaiting();
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      cleanupOutdatedCaches();
+      await self.clients.claim();
+    })()
+  );
 });
 
 self.addEventListener('error', (event) => {
