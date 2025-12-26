@@ -58,11 +58,11 @@ export const ChatSidebar = ({
   }, [roomsWithLatestMessages]);
 
   return (
-    <div className="flex h-full w-80 flex-col border-gray-200 border-r bg-white">
+    <div className="flex h-full w-80 flex-col border-gray-200 border-r bg-white dark:border-gray-700 dark:bg-gray-800">
       {/* Header */}
-      <div className="border-gray-200 border-b p-4">
+      <div className="border-gray-200 border-b p-4 dark:border-gray-700">
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="font-semibold text-gray-900 text-xl">Messages</h1>
+          <h1 className="font-semibold text-gray-900 text-xl dark:text-white">Messages</h1>
         </div>
       </div>
       {isLoading && (
@@ -73,7 +73,7 @@ export const ChatSidebar = ({
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
         {!isLoading && sortedRooms.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
+          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
             <p>No conversations yet</p>
           </div>
         ) : (

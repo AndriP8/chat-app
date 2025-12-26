@@ -14,12 +14,12 @@ export const ChatHeader = ({ room }: ChatHeaderProps) => {
   const avatar = recipientParticipant?.profile_picture_url;
 
   return (
-    <div className="flex items-center justify-between border-gray-200 border-b bg-white p-4">
+    <div className="flex items-center justify-between border-gray-200 border-b bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
       {/* Left side - Avatar and info */}
       <div className="flex items-center gap-3">
         {/* Avatar */}
         <div className="relative shrink-0">
-          <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-200">
+          <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
             {avatar ? (
               <img src={avatar} alt={displayName} className="h-full w-full object-cover" />
             ) : (
@@ -32,7 +32,7 @@ export const ChatHeader = ({ room }: ChatHeaderProps) => {
 
         {/* Name and status */}
         <div>
-          <h2 className="font-semibold text-gray-900">{displayName}</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white">{displayName}</h2>
         </div>
       </div>
     </div>

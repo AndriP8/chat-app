@@ -122,7 +122,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onLogi
                   getFieldError('email')
                     ? 'border-red-300 bg-red-50 dark:border-red-500 dark:bg-red-900/20'
                     : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700'
-                }text-gray-900 placeholder-gray-500 dark:text-white dark:placeholder-gray-400 `}
+                }text-gray-900 placeholder-gray-500 dark:placeholder-gray-400`}
                 placeholder="Enter your email"
                 autoComplete="email"
                 disabled={isSubmitting}
@@ -157,7 +157,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onLogi
                   getFieldError('password')
                     ? 'border-red-300 bg-red-50 dark:border-red-500 dark:bg-red-900/20'
                     : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700'
-                }text-gray-900 placeholder-gray-500 dark:text-white dark:placeholder-gray-400 `}
+                }text-gray-900 placeholder-gray-500 dark:placeholder-gray-400`}
                 placeholder="Enter your password"
                 autoComplete="current-password"
                 disabled={isSubmitting}

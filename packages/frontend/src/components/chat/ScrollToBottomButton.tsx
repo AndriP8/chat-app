@@ -17,7 +17,7 @@ export const ScrollToBottomButton = ({ onClick, unreadCount = 0 }: ScrollToBotto
     >
       <ArrowDown size={20} />
       {unreadCount > 0 && (
-        <span className="-right-1 -top-1 absolute flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 font-medium text-white text-xs">
+        <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 font-medium text-white text-xs">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}

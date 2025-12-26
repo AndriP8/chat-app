@@ -43,7 +43,7 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
       {!isOwn && (
         <div className="shrink-0">
           {showAvatar ? (
-            <div className="h-8 w-8 overflow-hidden rounded-full bg-gray-200 ">
+            <div className="h-8 w-8 overflow-hidden rounded-full bg-gray-200">
               {message.sender.profile_picture_url || message.sender.profile_picture_url ? (
                 <img
                   src={message.sender.profile_picture_url || message.sender.profile_picture_url}

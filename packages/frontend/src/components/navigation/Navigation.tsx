@@ -11,13 +11,13 @@ export function Navigation() {
   return (
     <>
       {currentUser?.is_demo && <DemoBanner />}
-      <nav className="sticky top-0 z-10 border-gray-200 border-b bg-white shadow-sm">
+      <nav className="sticky top-0 z-10 border-gray-200 border-b bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 justify-between">
             <div className="flex">
               <div className="flex space-x-8">
                 <div className="flex items-center">
-                  <h1 className="font-semibold text-gray-900 text-xl">Chat App</h1>
+                  <h1 className="font-semibold text-gray-900 text-xl dark:text-white">Chat App</h1>
                 </div>
                 {navItems.map((item) => (
                   <Link
@@ -25,8 +25,8 @@ export function Navigation() {
                     to={item.path}
                     className={`inline-flex items-center border-b-2 px-1 pt-1 font-medium text-sm ${
                       location.pathname === item.path
-                        ? 'border-blue-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                        ? 'border-blue-500 text-gray-900 dark:text-white'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300'
                     }`}
                   >
                     {item.label}
@@ -37,7 +37,7 @@ export function Navigation() {
             <button
               onClick={logout}
               type="button"
-              className="inline-flex cursor-pointer items-center px-1 pt-1 font-medium text-gray-500 text-sm hover:border-gray-300 hover:text-gray-700"
+              className="inline-flex cursor-pointer items-center px-1 pt-1 font-medium text-gray-500 text-sm hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             >
               Logout
             </button>

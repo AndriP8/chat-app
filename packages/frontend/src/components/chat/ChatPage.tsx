@@ -47,7 +47,7 @@ export default function ChatPage() {
   const currentMessages = currentRoom ? messages[currentRoom.id] || [] : [];
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-gray-50">
+    <div className="flex h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
       <ChatSidebar
         rooms={conversations}
@@ -63,7 +63,7 @@ export default function ChatPage() {
         <OfflineIndicator />
         {/* Message Error Display */}
         {Object.keys(error.messages || {}).length > 0 && currentRoom?.id && (
-          <div className="mx-4 mt-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+          <div className="mx-4 mt-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
             <p className="text-sm">{error.messages?.[currentRoom.id]}</p>
           </div>
         )}
@@ -88,8 +88,8 @@ export default function ChatPage() {
         ) : (
           /* Empty State */
           <div className="flex flex-1 items-center justify-center">
-            <div className="text-center text-gray-500">
-              <MessageCircle size={64} className="mx-auto mb-4 text-gray-300" />
+            <div className="text-center text-gray-500 dark:text-gray-400">
+              <MessageCircle size={64} className="mx-auto mb-4 text-gray-300 dark:text-gray-600" />
               <h2 className="mb-2 font-semibold text-xl">Welcome to Chat</h2>
               <p>Select a conversation to start messaging</p>
             </div>

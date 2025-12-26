@@ -86,7 +86,7 @@ export const MessageInput = ({
   };
 
   return (
-    <div className="sticky bottom-0 border-gray-200 border-t bg-white p-4">
+    <div className="sticky bottom-0 border-gray-200 border-t bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
       <form onSubmit={handleSubmit} className="flex items-center gap-3">
         {/* Message input */}
         <textarea
@@ -97,7 +97,7 @@ export const MessageInput = ({
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className="field-sizing-content w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 pr-12 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="field-sizing-content w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 pr-12 text-gray-900 placeholder-gray-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
           style={{ minHeight: '48px', maxHeight: '420px' }}
         />
 
