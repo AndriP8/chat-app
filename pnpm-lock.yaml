@@ -38,6 +38,9 @@ importers:
       dotenv:
         specifier: ^17.2.1
         version: 17.2.3
+      drizzle-kit:
+        specifier: ^0.24.2
+        version: 0.24.2
       drizzle-orm:
         specifier: ^0.33.0
         version: 0.33.0(@neondatabase/serverless@0.9.5)(@types/pg@8.16.0)(@types/react@19.2.7)(pg@8.16.3)(react@19.2.3)
@@ -78,9 +81,6 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
-      drizzle-kit:
-        specifier: ^0.24.2
-        version: 0.24.2
       tsc-alias:
         specifier: ^1.8.16
         version: 1.8.16
