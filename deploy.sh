@@ -108,7 +108,16 @@ pull_docker_images() {
 
   cd "$SCRIPT_DIR"
 
-  if ! COMPOSE_IMAGE_MODE=pull docker compose pull; then
+  local github_repo
+  github_repo=$(git config --get remote.origin.url | sed -E 's#.*github\.com[:/](.*)\.git#\1#')
+
+  if [[ -z "$github_repo" ]]; then
+    error_exit "Could not detect GitHub repository. Ensure this is a git repository with a GitHub remote."
+  fi
+
+  log INFO "Using GitHub repository: ${github_repo}"
+
+  if ! COMPOSE_IMAGE_MODE=pull GITHUB_REPOSITORY="$github_repo" docker compose pull; then
     error_exit "Failed to pull Docker images. Ensure you are logged in to ghcr.io"
   fi
 
@@ -120,7 +129,10 @@ run_database_migration() {
 
   cd "$SCRIPT_DIR"
 
-  if ! COMPOSE_IMAGE_MODE=pull docker compose run --rm backend pnpm db:migrate; then
+  local github_repo
+  github_repo=$(git config --get remote.origin.url | sed -E 's#.*github\.com[:/](.*)\.git#\1#')
+
+  if ! COMPOSE_IMAGE_MODE=pull GITHUB_REPOSITORY="$github_repo" docker compose run --rm backend pnpm db:migrate; then
     error_exit "Database migration failed"
   fi
 
@@ -132,7 +144,10 @@ restart_services() {
 
   cd "$SCRIPT_DIR"
 
-  if ! COMPOSE_IMAGE_MODE=pull docker compose up -d; then
+  local github_repo
+  github_repo=$(git config --get remote.origin.url | sed -E 's#.*github\.com[:/](.*)\.git#\1#')
+
+  if ! COMPOSE_IMAGE_MODE=pull GITHUB_REPOSITORY="$github_repo" docker compose up -d; then
     error_exit "Failed to restart services"
   fi
 
@@ -170,8 +185,11 @@ show_deployment_status() {
 
   cd "$SCRIPT_DIR"
 
+  local github_repo
+  github_repo=$(git config --get remote.origin.url | sed -E 's#.*github\.com[:/](.*)\.git#\1#')
+
   echo ""
-  COMPOSE_IMAGE_MODE=pull docker compose ps
+  COMPOSE_IMAGE_MODE=pull GITHUB_REPOSITORY="$github_repo" docker compose ps
   echo ""
 
   local commit_hash
