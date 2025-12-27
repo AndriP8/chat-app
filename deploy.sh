@@ -125,7 +125,36 @@ restart_services() {
 }
 
 health_check() {
-  log INFO "Running health check..."
+  log INFO "Waiting for backend container to be healthy..."
+
+  cd "$SCRIPT_DIR"
+
+  # Wait for Docker healthcheck to pass (max 60 seconds)
+  local wait_time=0
+  local max_wait=60
+
+  while [[ $wait_time -lt $max_wait ]]; do
+    local health_status
+    health_status=$(docker inspect --format='{{.State.Health.Status}}' chat-app-backend 2>/dev/null || echo "none")
+
+    if [[ "$health_status" == "healthy" ]]; then
+      log SUCCESS "Backend container is healthy"
+      break
+    fi
+
+    if [[ $wait_time -eq 0 ]]; then
+      log INFO "Waiting for backend healthcheck... (status: ${health_status})"
+    fi
+
+    sleep 2
+    wait_time=$((wait_time + 2))
+  done
+
+  if [[ $wait_time -ge $max_wait ]]; then
+    log WARNING "Backend container healthcheck timeout. Attempting direct HTTP check..."
+  fi
+
+  log INFO "Running HTTP health check..."
 
   local retries=0
 
