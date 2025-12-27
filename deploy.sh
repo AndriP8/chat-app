@@ -63,21 +63,6 @@ check_prerequisites() {
     error_exit "Docker Compose is not available. Please install Docker Compose."
   fi
 
-  log INFO "Checking Docker secrets..."
-
-  local required_secrets=("postgres_password" "jwt_secret")
-  local missing_secrets=()
-
-  for secret in "${required_secrets[@]}"; do
-    if ! docker secret inspect "$secret" &> /dev/null; then
-      missing_secrets+=("$secret")
-    fi
-  done
-
-  if [[ ${#missing_secrets[@]} -gt 0 ]]; then
-    error_exit "Missing Docker secrets: ${missing_secrets[*]}. See DEPLOYMENT.md for setup instructions."
-  fi
-
   log SUCCESS "All prerequisites met"
 }
 
@@ -103,25 +88,16 @@ pull_latest_code() {
   log SUCCESS "Updated to latest commit: ${commit_hash}"
 }
 
-pull_docker_images() {
-  log INFO "Pulling latest Docker images from GitHub Container Registry..."
+build_docker_images() {
+  log INFO "Building Docker images on VPS..."
 
   cd "$SCRIPT_DIR"
 
-  local github_repo
-  github_repo=$(git config --get remote.origin.url | sed -E 's#.*github\.com[:/](.*)\.git#\1#')
-
-  if [[ -z "$github_repo" ]]; then
-    error_exit "Could not detect GitHub repository. Ensure this is a git repository with a GitHub remote."
+  if ! docker compose build; then
+    error_exit "Failed to build Docker images"
   fi
 
-  log INFO "Using GitHub repository: ${github_repo}"
-
-  if ! COMPOSE_IMAGE_MODE=pull GITHUB_REPOSITORY="$github_repo" docker compose pull; then
-    error_exit "Failed to pull Docker images. Ensure you are logged in to ghcr.io"
-  fi
-
-  log SUCCESS "Docker images pulled successfully"
+  log SUCCESS "Docker images built successfully"
 }
 
 run_database_migration() {
@@ -129,10 +105,7 @@ run_database_migration() {
 
   cd "$SCRIPT_DIR"
 
-  local github_repo
-  github_repo=$(git config --get remote.origin.url | sed -E 's#.*github\.com[:/](.*)\.git#\1#')
-
-  if ! COMPOSE_IMAGE_MODE=pull GITHUB_REPOSITORY="$github_repo" docker compose run --rm backend pnpm db:migrate; then
+  if ! docker compose run --rm backend pnpm --filter @chat-app/backend db:migrate; then
     error_exit "Database migration failed"
   fi
 
@@ -140,14 +113,11 @@ run_database_migration() {
 }
 
 restart_services() {
-  log INFO "Restarting services with new images..."
+  log INFO "Restarting services with newly built images..."
 
   cd "$SCRIPT_DIR"
 
-  local github_repo
-  github_repo=$(git config --get remote.origin.url | sed -E 's#.*github\.com[:/](.*)\.git#\1#')
-
-  if ! COMPOSE_IMAGE_MODE=pull GITHUB_REPOSITORY="$github_repo" docker compose up -d; then
+  if ! docker compose up -d; then
     error_exit "Failed to restart services"
   fi
 
@@ -185,11 +155,8 @@ show_deployment_status() {
 
   cd "$SCRIPT_DIR"
 
-  local github_repo
-  github_repo=$(git config --get remote.origin.url | sed -E 's#.*github\.com[:/](.*)\.git#\1#')
-
   echo ""
-  COMPOSE_IMAGE_MODE=pull GITHUB_REPOSITORY="$github_repo" docker compose ps
+  docker compose ps
   echo ""
 
   local commit_hash
@@ -228,7 +195,7 @@ main() {
   pull_latest_code
   echo ""
 
-  pull_docker_images
+  build_docker_images
   echo ""
 
   run_database_migration
