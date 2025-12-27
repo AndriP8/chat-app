@@ -18,6 +18,8 @@ services:
       retries: 5
 
   backend:
+    # Use pre-built image if COMPOSE_IMAGE_MODE=pull, otherwise build from source
+    image: ${COMPOSE_IMAGE_MODE:+ghcr.io/${GITHUB_REPOSITORY:-your-username/chat-app}/backend:${IMAGE_TAG:-main}}
     build:
       context: .
       dockerfile: packages/backend/Dockerfile
@@ -39,6 +41,8 @@ services:
       - "${BACKEND_PORT:-3001}:3001"
 
   frontend:
+    # Use pre-built image if COMPOSE_IMAGE_MODE=pull, otherwise build from source
+    image: ${COMPOSE_IMAGE_MODE:+ghcr.io/${GITHUB_REPOSITORY:-your-username/chat-app}/frontend:${IMAGE_TAG:-main}}
     build:
       context: .
       dockerfile: packages/frontend/Dockerfile
