@@ -40,11 +40,5 @@ docker-compose.override.yml
 !*.env.example
 
 # Deployment artifacts
-backups/
-logs/
 *.log.*
-deployment/nginx/ssl/*.pem
-deployment/nginx/ssl/*.key
-.env.prod
-deployment/backups/*
-deployment/logs/*
+deployment.log
