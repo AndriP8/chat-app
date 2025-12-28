@@ -105,11 +105,44 @@ run_database_migration() {
 
   cd "$SCRIPT_DIR"
 
+  # Ensure PostgreSQL is healthy before running migrations
+  log INFO "Waiting for PostgreSQL to be healthy..."
+  local wait_time=0
+  local max_wait=60
+
+  while [[ $wait_time -lt $max_wait ]]; do
+    local pg_health
+    pg_health=$(docker inspect --format='{{.State.Health.Status}}' chat-app-postgres 2>/dev/null || echo "none")
+
+    if [[ "$pg_health" == "healthy" ]]; then
+      log SUCCESS "PostgreSQL is healthy"
+      break
+    fi
+
+    if [[ $wait_time -eq 0 ]]; then
+      log INFO "Waiting for PostgreSQL healthcheck... (status: ${pg_health})"
+    fi
+
+    sleep 2
+    wait_time=$((wait_time + 2))
+  done
+
+  if [[ $wait_time -ge $max_wait ]]; then
+    log ERROR "PostgreSQL healthcheck timeout"
+    docker compose logs postgres
+    error_exit "PostgreSQL is not healthy"
+  fi
+
   if ! docker compose run --rm backend pnpm --filter @chat-app/backend db:migrate; then
+    log ERROR "Migration command failed. Showing backend logs:"
+    docker compose logs backend
     error_exit "Database migration failed"
   fi
 
   log SUCCESS "Database migrations completed"
+
+  log INFO "Restarting backend service..."
+  docker compose restart backend
 }
 
 restart_services() {
@@ -217,10 +250,10 @@ main() {
   build_docker_images
   echo ""
 
-  run_database_migration
+  restart_services
   echo ""
 
-  restart_services
+  run_database_migration
   echo ""
 
   if ! health_check; then
