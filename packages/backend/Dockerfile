@@ -16,6 +16,7 @@ RUN pnpm install --frozen-lockfile --filter @chat-app/backend
 # Copy backend source code
 COPY packages/backend/src ./packages/backend/src
 COPY packages/backend/drizzle.config.ts ./packages/backend/
+COPY packages/backend/tsup.config.ts ./packages/backend/
 
 # Build backend
 RUN pnpm --filter @chat-app/backend build
@@ -65,4 +66,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
 # Start the application
-CMD ["node", "packages/backend/dist/src/index.js"]
+CMD ["node", "packages/backend/dist/index.js"]
