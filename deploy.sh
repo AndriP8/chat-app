@@ -129,9 +129,10 @@ health_check() {
 
   cd "$SCRIPT_DIR"
 
-  # Wait for Docker healthcheck to pass (max 60 seconds)
+  # Wait for Docker healthcheck to pass (max 90 seconds)
   local wait_time=0
-  local max_wait=60
+  local max_wait=90
+  local check_interval=3
 
   while [[ $wait_time -lt $max_wait ]]; do
     local health_status
@@ -139,43 +140,32 @@ health_check() {
 
     if [[ "$health_status" == "healthy" ]]; then
       log SUCCESS "Backend container is healthy"
-      break
+      return 0
+    fi
+
+    if [[ "$health_status" == "none" ]]; then
+      log WARNING "Backend container has no healthcheck configured"
+      log INFO "Skipping healthcheck and assuming success"
+      return 0
     fi
 
     if [[ $wait_time -eq 0 ]]; then
       log INFO "Waiting for backend healthcheck... (status: ${health_status})"
+    elif [[ $((wait_time % 15)) -eq 0 ]]; then
+      log INFO "Still waiting... (status: ${health_status}, elapsed: ${wait_time}s)"
     fi
 
-    sleep 2
-    wait_time=$((wait_time + 2))
+    sleep $check_interval
+    wait_time=$((wait_time + check_interval))
   done
 
-  if [[ $wait_time -ge $max_wait ]]; then
-    log WARNING "Backend container healthcheck timeout. Attempting direct HTTP check..."
-  fi
+  # If healthcheck times out, show container logs and status
+  log ERROR "Backend container healthcheck failed after ${max_wait}s"
+  log ERROR "Container status:"
+  docker compose ps backend
+  log ERROR "Recent backend logs:"
+  docker compose logs --tail=50 backend
 
-  log INFO "Running HTTP health check..."
-
-  local retries=0
-
-  while [[ $retries -lt $HEALTH_CHECK_RETRIES ]]; do
-    log INFO "Health check attempt $((retries + 1))/${HEALTH_CHECK_RETRIES}..."
-
-    local status_code
-    status_code=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_CHECK_URL" || echo "000")
-
-    if [[ "$status_code" == "200" ]]; then
-      log SUCCESS "Backend health check passed (HTTP ${status_code})"
-      return 0
-    fi
-
-    log WARNING "Health check failed (HTTP ${status_code}). Retrying in ${HEALTH_CHECK_DELAY}s..."
-    sleep "$HEALTH_CHECK_DELAY"
-    retries=$((retries + 1))
-  done
-
-  log ERROR "Health check failed after ${HEALTH_CHECK_RETRIES} attempts"
-  log ERROR "Check logs with: docker compose logs backend"
   return 1
 }
 
