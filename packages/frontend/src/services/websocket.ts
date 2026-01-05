@@ -93,6 +93,9 @@ export class WebSocketService {
   private eventHandlers: WebSocketEventHandlers = {};
   private joinedConversations = new Set<string>();
   baseUrl: string;
+  private reconnectAttempts = 0;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private shouldReconnect = true;
 
   constructor(baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001') {
     this.baseUrl = baseUrl;
@@ -121,8 +124,6 @@ export class WebSocketService {
       }
 
       this.setState('connecting');
-
-      // Construct WebSocket URL with auth token
       const wsUrl = `${this.baseUrl}/ws`;
 
       try {
@@ -130,6 +131,7 @@ export class WebSocketService {
 
         this.ws.onopen = () => {
           this.setState('connected');
+          this.reconnectAttempts = 0;
           resolve();
         };
 
@@ -144,6 +146,9 @@ export class WebSocketService {
 
         this.ws.onclose = () => {
           this.setState('disconnected');
+          if (this.shouldReconnect) {
+            this.scheduleReconnect();
+          }
         };
 
         this.ws.onerror = (error) => {
@@ -156,6 +161,20 @@ export class WebSocketService {
         reject(error);
       }
     });
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimeout) return;
+
+    const delay = Math.min(1000 * 2 ** this.reconnectAttempts, 30000);
+    this.reconnectAttempts++;
+
+    this.reconnectTimeout = setTimeout(() => {
+      this.reconnectTimeout = null;
+      this.connect().catch(() => {
+        // Will retry via onclose handler
+      });
+    }, delay);
   }
 
   private handleMessage(response: WebSocketResponse): void {
@@ -289,6 +308,11 @@ export class WebSocketService {
   }
 
   public disconnect(): void {
+    this.shouldReconnect = false;
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect');
       this.ws = null;

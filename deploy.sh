@@ -10,7 +10,6 @@ readonly NC='\033[0m'
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_FILE="${SCRIPT_DIR}/deployment.log"
-readonly HEALTH_CHECK_URL="http://localhost:3001/api/health"
 readonly HEALTH_CHECK_RETRIES=5
 readonly HEALTH_CHECK_DELAY=5
 

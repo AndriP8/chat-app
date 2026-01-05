@@ -8,6 +8,7 @@ import { Navigation } from './components/navigation/Navigation';
 import { InstallPrompt } from './components/pwa/InstallPrompt';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { HomePage } from './pages/HomePage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const LoadingSpinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -37,10 +38,12 @@ function App() {
                 path="/chat"
                 element={
                   <AuthGuard>
-                    <div className="min-h-screen bg-gray-50">
-                      <Navigation />
-                      <ChatPage />
-                    </div>
+                    <ErrorBoundary>
+                      <div className="min-h-screen bg-gray-50">
+                        <Navigation />
+                        <ChatPage />
+                      </div>
+                    </ErrorBoundary>
                   </AuthGuard>
                 }
               />

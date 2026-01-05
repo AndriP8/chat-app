@@ -22,6 +22,7 @@ dist-ssr
 # AI
 CLAUDE.md
 .mcp.json
+.claude/*
 
 # PWA generated files
 packages/frontend/dev-dist/

@@ -11,23 +11,67 @@ interface SenderState {
   expectedSequence: number;
   buffer: Map<number, BufferedMessage>;
   gapTimer: NodeJS.Timeout | null;
+  lastActivity: number;
 }
 
 interface OrderingConfig {
   gapTimeoutMs: number;
   maxBufferSize: number;
+  inactivityTimeoutMs: number;
 }
 
 const DEFAULT_CONFIG: OrderingConfig = {
   gapTimeoutMs: 5000,
   maxBufferSize: 100,
+  inactivityTimeoutMs: 60 * 60 * 1000, // 1 hour
 };
 
 export class MessageOrderingService {
   private senderStates = new Map<string, Map<string, SenderState>>();
   private config: OrderingConfig;
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
   constructor(config: Partial<OrderingConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.startCleanup();
+  }
+
+  private startCleanup(): void {
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupInactiveSenders();
+    }, 10 * 60 * 1000); // Run every 10 minutes
+  }
+
+  private cleanupInactiveSenders(): void {
+    const now = Date.now();
+    for (const [conversationId, senderMap] of this.senderStates) {
+      for (const [senderId, state] of senderMap) {
+        if (now - state.lastActivity > this.config.inactivityTimeoutMs) {
+          if (state.gapTimer) {
+            clearTimeout(state.gapTimer);
+          }
+          senderMap.delete(senderId);
+        }
+      }
+      if (senderMap.size === 0) {
+        this.senderStates.delete(conversationId);
+      }
+    }
+  }
+
+  public destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    for (const senderMap of this.senderStates.values()) {
+      for (const state of senderMap.values()) {
+        if (state.gapTimer) {
+          clearTimeout(state.gapTimer);
+        }
+      }
+    }
+    this.senderStates.clear();
   }
 
   /**
@@ -44,6 +88,7 @@ export class MessageOrderingService {
     const sequenceNumber = message.sequence_number;
 
     const senderState = await this.getOrCreateSenderState(conversationId, senderId, sequenceNumber);
+    senderState.lastActivity = Date.now();
 
     if (sequenceNumber === senderState.expectedSequence) {
       const deliverableMessages: Message[] = [message];
@@ -151,6 +196,7 @@ export class MessageOrderingService {
           expectedSequence,
           buffer: new Map(),
           gapTimer: null,
+          lastActivity: Date.now(),
         });
       } catch (error) {
         console.error(
