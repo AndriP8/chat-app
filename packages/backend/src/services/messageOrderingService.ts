@@ -37,9 +37,12 @@ export class MessageOrderingService {
   }
 
   private startCleanup(): void {
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupInactiveSenders();
-    }, 10 * 60 * 1000); // Run every 10 minutes
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanupInactiveSenders();
+      },
+      10 * 60 * 1000
+    ); // Run every 10 minutes
   }
 
   private cleanupInactiveSenders(): void {
