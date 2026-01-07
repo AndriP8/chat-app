@@ -3,24 +3,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CleanupService } from '@/services/cleanupService';
 
 // Mock node-cron
-const mockStop = vi.fn();
-const mockScheduledTask: ScheduledTask = {
-  stop: mockStop,
-  start: vi.fn(),
-} as unknown as ScheduledTask;
+vi.mock('node-cron', () => {
+  const mockStop = vi.fn();
+  const mockScheduledTask: ScheduledTask = {
+    stop: mockStop,
+    start: vi.fn(),
+  } as unknown as ScheduledTask;
 
-vi.mock('node-cron', () => ({
-  default: {
-    schedule: vi.fn().mockReturnValue(mockScheduledTask),
-  },
-}));
+  return {
+    default: {
+      schedule: vi.fn().mockReturnValue(mockScheduledTask),
+    },
+  };
+});
 
 // Mock database
-const mockTransaction = vi.fn();
-const mockSelect = vi.fn();
-const mockDelete = vi.fn();
-
 vi.mock('@/db', () => {
+  const mockTransaction = vi.fn();
+  const mockSelect = vi.fn();
+  const mockDelete = vi.fn();
+
   const createMockTable = (name: string) => ({
     _: { name },
   });
@@ -55,30 +57,41 @@ describe('CleanupService', () => {
       expect(cron.default.schedule).toHaveBeenCalledWith('0 */6 * * *', expect.any(Function));
     });
 
-    it('should stop scheduled task on stop', () => {
+    it('should stop scheduled task on stop', async () => {
+      const cron = await import('node-cron');
+
       service.start();
       service.stop();
 
-      expect(mockStop).toHaveBeenCalled();
+      // Access the mockScheduledTask that was returned by schedule
+      const scheduleCalls = vi.mocked(cron.default.schedule).mock.results;
+      const mockTask = scheduleCalls[scheduleCalls.length - 1]?.value;
+
+      expect(mockTask?.stop).toHaveBeenCalled();
     });
 
     it('should not throw error when stopping before starting', () => {
       expect(() => service.stop()).not.toThrow();
     });
 
-    it('should handle multiple start calls', () => {
+    it('should handle multiple start calls', async () => {
+      const cron = await import('node-cron');
+
       service.start();
       service.start();
 
-      // Only the first call creates the task
-      expect(vi.mocked(mockScheduledTask.stop).mock.calls.length).toBe(0);
+      // Only the first start() should call schedule
+      expect(cron.default.schedule).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('cleanupInactiveDemoUsers', () => {
     it('should return early if no inactive demo users found', async () => {
+      const { db } = await import('@/db');
+
       // Mock empty result
-      mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock requires flexible typing for test transactions
+      vi.mocked(db.transaction).mockImplementation(async (callback: any) => {
         const mockTx = {
           select: vi.fn().mockReturnValue({
             from: vi.fn().mockReturnValue({
@@ -100,11 +113,13 @@ describe('CleanupService', () => {
     });
 
     it('should delete inactive demo users and their data', async () => {
+      const { db } = await import('@/db');
       const mockDemoUsers = [{ id: 'demo-user-1' }, { id: 'demo-user-2' }];
       const mockDeletedMessages = Array(10).fill({ id: 'msg' });
       const mockDeletedConversations = Array(2).fill({ id: 'conv' });
 
-      mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock requires flexible typing for test transactions
+      vi.mocked(db.transaction).mockImplementation(async (callback: any) => {
         const mockTx = {
           select: vi.fn().mockReturnValue({
             from: vi.fn().mockReturnValue({
@@ -161,8 +176,9 @@ describe('CleanupService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
+      const { db } = await import('@/db');
       const errorMessage = 'Database connection failed';
-      mockTransaction.mockRejectedValue(new Error(errorMessage));
+      vi.mocked(db.transaction).mockRejectedValue(new Error(errorMessage));
 
       const result = await service.cleanupInactiveDemoUsers();
 
@@ -173,7 +189,8 @@ describe('CleanupService', () => {
     });
 
     it('should handle unknown errors', async () => {
-      mockTransaction.mockRejectedValue('Unknown error');
+      const { db } = await import('@/db');
+      vi.mocked(db.transaction).mockRejectedValue('Unknown error');
 
       const result = await service.cleanupInactiveDemoUsers();
 
@@ -184,13 +201,15 @@ describe('CleanupService', () => {
     });
 
     it('should calculate correct cutoff date (24 hours ago)', async () => {
+      const { db } = await import('@/db');
       const now = new Date('2025-01-06T12:00:00Z');
       const expectedCutoff = new Date('2025-01-05T12:00:00Z');
 
       vi.useFakeTimers();
       vi.setSystemTime(now);
 
-      mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock requires flexible typing for test transactions
+      vi.mocked(db.transaction).mockImplementation(async (callback: any) => {
         const mockTx = {
           select: vi.fn().mockReturnValue({
             from: vi.fn().mockReturnValue({
@@ -213,9 +232,11 @@ describe('CleanupService', () => {
     });
 
     it('should delete in correct order: messages → participants → conversations → users', async () => {
+      const { db } = await import('@/db');
       const deleteOrder: string[] = [];
 
-      mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock requires flexible typing for test transactions
+      vi.mocked(db.transaction).mockImplementation(async (callback: any) => {
         const mockTx = {
           select: vi.fn().mockReturnValue({
             from: vi.fn().mockReturnValue({
@@ -248,15 +269,24 @@ describe('CleanupService', () => {
   describe('Integration with cron schedule', () => {
     it('should execute cleanup when cron job triggers', async () => {
       const cron = await import('node-cron');
+      const { db } = await import('@/db');
       let scheduledCallback: (() => Promise<void>) | null = null;
+
+      // Create a mock scheduled task for this specific test
+      const mockStop = vi.fn();
+      const testMockScheduledTask = {
+        stop: mockStop,
+        start: vi.fn(),
+      } as unknown as ScheduledTask;
 
       vi.mocked(cron.default.schedule).mockImplementation((_, callback) => {
         scheduledCallback = callback as () => Promise<void>;
-        return mockScheduledTask;
+        return testMockScheduledTask;
       });
 
       // Mock successful cleanup
-      mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Mock requires flexible typing for test transactions
+      vi.mocked(db.transaction).mockImplementation(async (callback: any) => {
         const mockTx = {
           select: vi.fn().mockReturnValue({
             from: vi.fn().mockReturnValue({
@@ -273,7 +303,7 @@ describe('CleanupService', () => {
       expect(scheduledCallback).not.toBeNull();
       await scheduledCallback!();
 
-      expect(mockTransaction).toHaveBeenCalled();
+      expect(db.transaction).toHaveBeenCalled();
     });
   });
 });
