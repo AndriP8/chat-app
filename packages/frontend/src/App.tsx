@@ -4,11 +4,11 @@ import { AuthProvider } from '@/components/auth/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { AuthPage } from './components/auth/AuthPage';
 import ChatPage from './components/chat/ChatPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navigation } from './components/navigation/Navigation';
 import { InstallPrompt } from './components/pwa/InstallPrompt';
 import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 import { HomePage } from './pages/HomePage';
-import { ErrorBoundary } from './components/ErrorBoundary';
 
 const LoadingSpinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-gray-50">

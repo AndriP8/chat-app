@@ -2,16 +2,6 @@ import { ensureDate } from '@/utils/helpers';
 import type { Message, SendMessageRequest } from '../types/database';
 import { dbOps } from './databaseOperations';
 
-// Type definitions for Background Sync API
-interface SyncManager {
-  getTags(): Promise<string[]>;
-  register(tag: string): Promise<void>;
-}
-
-interface ExtendedServiceWorkerRegistration extends ServiceWorkerRegistration {
-  sync: SyncManager;
-}
-
 interface SchedulerConfig {
   maxRetries: number;
   baseDelayMs: number;
@@ -152,11 +142,8 @@ export class MessageScheduler {
         navigator.serviceWorker.ready
       ) {
         try {
-          const registration = (await navigator.serviceWorker
-            .ready) as ExtendedServiceWorkerRegistration;
-          if ('sync' in registration) {
-            await registration.sync.register('sync-messages');
-          }
+          const registration = await navigator.serviceWorker.ready;
+          await registration.sync.register('sync-messages');
         } catch (error) {
           console.warn('[MessageScheduler] Background sync not available:', error);
         }

@@ -45,6 +45,7 @@ export const MessageList = ({
   const prevScrollHeightRef = useRef(0);
   const isLoadingMoreRef = useRef(false);
   const hasInitiallyScrolledRef = useRef(false);
+  const markedAsReadRef = useRef<Set<string>>(new Set());
 
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -145,10 +146,32 @@ export const MessageList = ({
     }
   }, [isLoadingMore]);
 
-  // Mark messages as read when they are displayed (only visible items in virtualizer)
   useEffect(() => {
     if (!conversationId || !currentUser || messages.length === 0) return;
-    // TODO: When user scroll to top and receive new message, the new message should mark as read without scroll to bottom and add indicator in scroll to bottom component
+
+    const previousLength = prevMessagesLengthRef.current;
+    const hasNewMessages = messages.length > previousLength;
+
+    if (hasNewMessages) {
+      const newMessages = messages.slice(previousLength);
+
+      const newUnreadMessages = newMessages.filter(
+        (message) => message.sender_id !== currentUser.id && message.status !== 'read'
+      );
+
+      for (const message of newUnreadMessages) {
+        if (!markedAsReadRef.current.has(message.id)) {
+          markedAsReadRef.current.add(message.id);
+          webSocketService.markMessageRead(message.id, conversationId);
+        }
+      }
+    }
+  }, [messages.length, messages, currentUser, conversationId]);
+
+  // Mark messages as read when they are displayed (only visible items in virtualizer)
+  // This handles old messages when user scrolls up to read history
+  useEffect(() => {
+    if (!conversationId || !currentUser || messages.length === 0) return;
     const visibleIndexes = new Set(virtualizer.getVirtualItems().map((item) => item.index));
 
     // Filter for visible unread messages only
@@ -160,9 +183,21 @@ export const MessageList = ({
     );
 
     for (const message of unreadMessages) {
-      webSocketService.markMessageRead(message.id, conversationId);
+      if (!markedAsReadRef.current.has(message.id)) {
+        markedAsReadRef.current.add(message.id);
+        webSocketService.markMessageRead(message.id, conversationId);
+      }
     }
   }, [messages, currentUser, conversationId, virtualizer]);
+
+  // Clear tracking set when switching conversations
+  const prevConversationIdRef = useRef(conversationId);
+  useEffect(() => {
+    if (prevConversationIdRef.current !== conversationId) {
+      markedAsReadRef.current.clear();
+      prevConversationIdRef.current = conversationId;
+    }
+  }, [conversationId]);
 
   if (isLoading) {
     return (
