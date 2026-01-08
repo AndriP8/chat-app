@@ -56,7 +56,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
         // Mark as processed
         processedMessagesRef.current.add(messageKey);
 
-        const sender = await dbOps.getUser(message.sender_id);
+        const sender = await dbOps.getUser(message.senderId);
         if (!sender) return;
 
         const uiMessage: UIMessage = {
@@ -64,8 +64,8 @@ export function useWebSocketConversations(): UseConversationsReturn {
           sender,
           isTemporary: false,
           retryCount: 0,
-          created_at: ensureDate(message.created_at),
-          updated_at: ensureDate(message.updated_at),
+          createdAt: ensureDate(message.createdAt),
+          updatedAt: ensureDate(message.updatedAt),
         };
 
         if (message.tempId && sender.id === currentUser?.id) {
@@ -73,7 +73,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
           dispatch({
             type: 'REPLACE_TEMP_MESSAGE',
             payload: {
-              conversationId: message.conversation_id,
+              conversationId: message.conversationId,
               tempId: message.tempId,
               message: uiMessage,
             },
@@ -83,7 +83,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
           dispatch({
             type: 'ADD_MESSAGE',
             payload: {
-              conversationId: message.conversation_id,
+              conversationId: message.conversationId,
               message: uiMessage,
             },
           });
@@ -145,7 +145,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
 
       const uiMessages = [];
       for (const message of localMessages) {
-        const sender = await dbOps.getUser(message.sender_id);
+        const sender = await dbOps.getUser(message.senderId);
         if (sender) {
           uiMessages.push({
             ...message,
@@ -322,18 +322,18 @@ export function useWebSocketConversations(): UseConversationsReturn {
         id: tempId,
         tempId,
         content,
-        sender_id: currentUser.id,
-        conversation_id: conversationId,
+        senderId: currentUser.id,
+        conversationId: conversationId,
         sender: {
           id: currentUser.id,
           name: currentUser.name || 'Unknown User',
           email: currentUser.email,
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
         status: 'sending',
-        created_at: new Date(),
-        updated_at: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         isTemporary: true,
       };
       try {

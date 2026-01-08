@@ -44,9 +44,9 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
         <div className="shrink-0">
           {showAvatar ? (
             <div className="h-8 w-8 overflow-hidden rounded-full bg-gray-200">
-              {message.sender.profile_picture_url || message.sender.profile_picture_url ? (
+              {message.sender.profilePictureUrl || message.sender.profilePictureUrl ? (
                 <img
-                  src={message.sender.profile_picture_url || message.sender.profile_picture_url}
+                  src={message.sender.profilePictureUrl || message.sender.profilePictureUrl}
                   alt={message.sender.name || message.sender.name}
                   className="h-full w-full object-cover"
                 />
@@ -80,7 +80,7 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
         <div
           className={`mt-1 flex items-center gap-1 px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
         >
-          <span className="text-gray-500 text-xs">{formatMessageTime(message.created_at)}</span>
+          <span className="text-gray-500 text-xs">{formatMessageTime(message.createdAt)}</span>
           {renderStatusIcon()}
         </div>
       </div>

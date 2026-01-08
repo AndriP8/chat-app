@@ -41,9 +41,9 @@ export class DataSyncer {
         throw new Error('WebSocket service not available');
       }
 
-      const message = await dbOps.getMessageById(request.message_id);
+      const message = await dbOps.getMessageById(request.messageId);
       if (!message) {
-        throw new Error(`Message with id ${request.message_id} not found`);
+        throw new Error(`Message with id ${request.messageId} not found`);
       }
 
       if (!this.webSocketService.isConnected()) {
@@ -51,16 +51,16 @@ export class DataSyncer {
       }
 
       await this.webSocketService.sendMessage(
-        message.conversation_id,
+        message.conversationId,
         message.content,
         message.id,
-        message.sequence_number,
-        message.created_at.toISOString()
+        message.sequenceNumber,
+        message.createdAt.toISOString()
       );
 
       return {
         ...message,
-        updated_at: new Date(),
+        updatedAt: new Date(),
       };
     });
 
@@ -125,9 +125,9 @@ export class DataSyncer {
           tempId: message.tempId,
         });
 
-        if (message.sender_id !== this.currentUserId) {
+        if (message.senderId !== this.currentUserId) {
           try {
-            this.webSocketService.markMessageDelivered(message.id, message.conversation_id);
+            this.webSocketService.markMessageDelivered(message.id, message.conversationId);
           } catch (error) {
             console.error('Failed to mark message as delivered:', error);
           }
@@ -213,11 +213,11 @@ export class DataSyncer {
         const chatRooms: ChatRoom[] = localConversations.map((conversation) => ({
           id: conversation.id,
           name: conversation.name ?? null,
-          created_by: conversation.created_by,
+          createdBy: conversation.createdBy,
           participants: conversation.participants,
-          last_message: conversation.last_message,
-          created_at: conversation.created_at.toISOString(),
-          updated_at: conversation.updated_at.toISOString(),
+          lastMessage: conversation.lastMessage,
+          createdAt: conversation.createdAt.toISOString(),
+          updatedAt: conversation.updatedAt.toISOString(),
         }));
 
         return chatRooms;
@@ -232,9 +232,9 @@ export class DataSyncer {
           await dbOps.upsertConversation({
             id: conversation.id,
             name: conversation.name || undefined,
-            created_by: conversation.created_by,
-            created_at: new Date(conversation.created_at),
-            updated_at: new Date(conversation.updated_at),
+            createdBy: conversation.createdBy,
+            createdAt: new Date(conversation.createdAt),
+            updatedAt: new Date(conversation.updatedAt),
           });
 
           // Store participants
@@ -244,12 +244,12 @@ export class DataSyncer {
                 id: participant.id,
                 name: participant.name,
                 email: participant.email,
-                profile_picture_url: participant.profile_picture_url || undefined,
+                profilePictureUrl: participant.profilePictureUrl || undefined,
               });
 
               await dbOps.addConversationParticipant({
-                conversation_id: conversation.id,
-                user_id: participant.id,
+                conversationId: conversation.id,
+                userId: participant.id,
               });
             } catch (error) {
               console.error(
@@ -260,21 +260,21 @@ export class DataSyncer {
           }
 
           // Store last message if it exists
-          if (conversation.last_message) {
+          if (conversation.lastMessage) {
             try {
               // Store the last message
               await dbOps.upsertMessage({
-                id: conversation.last_message.id,
-                content: conversation.last_message.content,
-                status: conversation.last_message.status,
-                sender_id: conversation.last_message.sender_id,
-                conversation_id: conversation.last_message.conversation_id,
-                tempId: conversation.last_message.tempId,
-                created_at: conversation.last_message.created_at,
-                updated_at: conversation.last_message.updated_at,
+                id: conversation.lastMessage.id,
+                content: conversation.lastMessage.content,
+                status: conversation.lastMessage.status,
+                senderId: conversation.lastMessage.senderId,
+                conversationId: conversation.lastMessage.conversationId,
+                tempId: conversation.lastMessage.tempId,
+                createdAt: conversation.lastMessage.createdAt,
+                updatedAt: conversation.lastMessage.updatedAt,
               });
               this.webSocketService?.markMessageDelivered(
-                conversation.last_message.id,
+                conversation.lastMessage.id,
                 conversation.id
               );
             } catch (error) {
@@ -309,18 +309,18 @@ export class DataSyncer {
       if (existingCounter) return;
 
       const userMessages = messages.filter(
-        (m) => m.sender_id === userId && m.sequence_number != null
+        (m) => m.senderId === userId && m.sequenceNumber != null
       );
 
       if (!userMessages.length) return;
 
-      const maxSequence = Math.max(...userMessages.map((m) => m.sequence_number!));
+      const maxSequence = Math.max(...userMessages.map((m) => m.sequenceNumber!));
 
       await db.sequence_counters.put({
-        conversation_id: conversationId,
-        user_id: userId,
-        next_sequence: maxSequence + 1,
-        updated_at: new Date(),
+        conversationId: conversationId,
+        userId: userId,
+        nextSequence: maxSequence + 1,
+        updatedAt: new Date(),
       });
     } catch (error) {
       console.error('Failed to initialize sequence counter:', error);
@@ -348,13 +348,13 @@ export class DataSyncer {
           // Convert database messages to UI messages by adding sender info
           const uiMessages = [];
           for (const message of localMessages) {
-            const sender = await dbOps.getUser(message.sender_id);
+            const sender = await dbOps.getUser(message.senderId);
             if (sender) {
               uiMessages.push({
                 ...message,
                 sender,
-                created_at: ensureDate(message.created_at),
-                updated_at: ensureDate(message.updated_at),
+                created_at: ensureDate(message.createdAt),
+                updated_at: ensureDate(message.updatedAt),
               });
             }
           }
@@ -363,7 +363,7 @@ export class DataSyncer {
           const paginationMeta = await dbOps.getPaginationMetadata(conversationId);
 
           if (paginationMeta && uiMessages.length > 0) {
-            hasMore = paginationMeta.has_more;
+            hasMore = paginationMeta.hasMore;
           }
 
           return { messages: uiMessages, hasMore };
@@ -379,11 +379,11 @@ export class DataSyncer {
             id: message.id,
             content: message.content,
             status: message.status,
-            sender_id: message.sender_id,
-            conversation_id: message.conversation_id,
+            senderId: message.senderId,
+            conversationId: message.conversationId,
             tempId: message.tempId,
-            created_at: message.created_at,
-            updated_at: message.updated_at,
+            createdAt: message.createdAt,
+            updatedAt: message.updatedAt,
           });
         }
 
@@ -391,9 +391,9 @@ export class DataSyncer {
         if (serverData.messages.length > 0) {
           const oldestMessageId = serverData.messages[0].id;
           await dbOps.upsertPaginationMetadata(conversationId, {
-            has_more: serverData.hasMore,
-            next_cursor: serverData.nextCursor,
-            last_message_id: oldestMessageId,
+            hasMore: serverData.hasMore,
+            nextCursor: serverData.nextCursor,
+            lastMessageId: oldestMessageId,
           });
         }
 
@@ -409,8 +409,8 @@ export class DataSyncer {
         return {
           messages: serverData.messages.map((message) => ({
             ...message,
-            created_at: ensureDate(message.created_at),
-            updated_at: ensureDate(message.updated_at),
+            created_at: ensureDate(message.createdAt),
+            updated_at: ensureDate(message.updatedAt),
           })),
           hasMore: serverData.hasMore,
         };
@@ -436,7 +436,7 @@ export class DataSyncer {
       // First, try to load from local IndexedDB
       const localMessages = await dbOps.getConversationMessages(conversationId, {
         limit,
-        next_cursor: oldestMessageId,
+        nextCursor: oldestMessageId,
       });
 
       // If we have messages locally AND we got the full limit, use local data
@@ -445,26 +445,26 @@ export class DataSyncer {
         // Convert to UI messages
         const uiMessages = [];
         for (const message of localMessages) {
-          const sender = await dbOps.getUser(message.sender_id);
+          const sender = await dbOps.getUser(message.senderId);
           if (sender) {
             uiMessages.push({
               ...message,
               sender,
-              created_at: ensureDate(message.created_at),
-              updated_at: ensureDate(message.updated_at),
+              created_at: ensureDate(message.createdAt),
+              updated_at: ensureDate(message.updatedAt),
             });
           }
         }
 
         const paginationMetadata = await dbOps.getPaginationMetadata(conversationId);
 
-        return { messages: uiMessages, hasMore: paginationMetadata?.has_more ?? false };
+        return { messages: uiMessages, hasMore: paginationMetadata?.hasMore ?? false };
       }
 
       try {
         const serverData = await conversationApi.getMessages(conversationId, {
           limit,
-          next_cursor: oldestMessageId,
+          nextCursor: oldestMessageId,
         });
 
         // Store messages locally for future offline access
@@ -473,11 +473,11 @@ export class DataSyncer {
             id: message.id,
             content: message.content,
             status: message.status,
-            sender_id: message.sender_id,
-            conversation_id: message.conversation_id,
+            senderId: message.senderId,
+            conversationId: message.conversationId,
             tempId: message.tempId,
-            created_at: message.created_at,
-            updated_at: message.updated_at,
+            createdAt: message.createdAt,
+            updatedAt: message.updatedAt,
           });
         }
 
@@ -485,9 +485,9 @@ export class DataSyncer {
         if (serverData.messages.length > 0) {
           const oldestNewMessageId = serverData.messages[0].id;
           await dbOps.upsertPaginationMetadata(conversationId, {
-            has_more: serverData.hasMore,
-            next_cursor: serverData.nextCursor,
-            last_message_id: oldestNewMessageId,
+            hasMore: serverData.hasMore,
+            nextCursor: serverData.nextCursor,
+            lastMessageId: oldestNewMessageId,
           });
         }
 
@@ -504,8 +504,8 @@ export class DataSyncer {
         return {
           messages: serverData.messages.map((message) => ({
             ...message,
-            created_at: ensureDate(message.created_at),
-            updated_at: ensureDate(message.updated_at),
+            created_at: ensureDate(message.createdAt),
+            updated_at: ensureDate(message.updatedAt),
           })),
           hasMore: serverData.hasMore,
         };
@@ -516,13 +516,13 @@ export class DataSyncer {
         if (localMessages.length > 0) {
           const uiMessages = [];
           for (const message of localMessages) {
-            const sender = await dbOps.getUser(message.sender_id);
+            const sender = await dbOps.getUser(message.senderId);
             if (sender) {
               uiMessages.push({
                 ...message,
                 sender,
-                created_at: ensureDate(message.created_at),
-                updated_at: ensureDate(message.updated_at),
+                created_at: ensureDate(message.createdAt),
+                updated_at: ensureDate(message.updatedAt),
               });
             }
           }
@@ -551,14 +551,14 @@ export class DataSyncer {
       const sequenceNumber = await getNextSequenceNumber(conversationId, userId);
 
       // Create optimistic message in database
-      const optimisticMessage: Omit<Message, 'created_at' | 'updated_at'> = {
+      const optimisticMessage: Omit<Message, 'createdAt' | 'updatedAt'> = {
         id: tempId, // Will be replaced with server ID
-        conversation_id: conversationId,
-        sender_id: userId,
+        conversationId: conversationId,
+        senderId: userId,
         content,
         status: 'sending',
         tempId: tempId,
-        sequence_number: sequenceNumber,
+        sequenceNumber: sequenceNumber,
       };
 
       await dbOps.upsertMessage(optimisticMessage);

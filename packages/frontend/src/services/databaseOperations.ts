@@ -15,14 +15,14 @@ export class DatabaseOperations {
     return db;
   }
   // ===== USER OPERATIONS =====
-  async upsertUser(user: Omit<User, 'created_at' | 'updated_at'>): Promise<User> {
+  async upsertUser(user: Omit<User, 'createdAt' | 'updatedAt'>): Promise<User> {
     try {
       const existingUser = await db.users.get(user.id);
       if (existingUser) {
         await db.users.update(user.id, user);
-        return { ...existingUser, ...user, updated_at: new Date() };
+        return { ...existingUser, ...user, updatedAt: new Date() };
       }
-      const newUser = { ...user, created_at: new Date(), updated_at: new Date() };
+      const newUser = { ...user, createdAt: new Date(), updatedAt: new Date() };
       await db.users.add(newUser);
       return newUser;
     } catch (error) {
@@ -51,7 +51,7 @@ export class DatabaseOperations {
       const existingConversation = await db.conversations.get(conversation.id);
       if (existingConversation) {
         await db.conversations.update(conversation.id, conversation);
-        return { ...existingConversation, ...conversation, updated_at: new Date() };
+        return { ...existingConversation, ...conversation, updatedAt: new Date() };
       }
       const newConversation = { ...conversation };
       await db.conversations.add(newConversation);
@@ -68,18 +68,18 @@ export class DatabaseOperations {
     conversationId: string
   ): Promise<(Message & { sender: User }) | null> {
     try {
-      // Get all messages for this conversation, sorted by created_at ascending
+      // Get all messages for this conversation, sorted by createdAt ascending
       const allMessages = await db.messages
-        .where('conversation_id')
+        .where('conversationId')
         .equals(conversationId)
-        .sortBy('created_at');
+        .sortBy('createdAt');
 
       const lastMessage = allMessages[allMessages.length - 1];
       if (!lastMessage) {
         return null;
       }
 
-      const sender = await this.getUser(lastMessage.sender_id);
+      const sender = await this.getUser(lastMessage.senderId);
       if (!sender) {
         return null;
       }
@@ -99,18 +99,18 @@ export class DatabaseOperations {
     userId: string
   ): Promise<
     Array<
-      Conversation & { participants: User[]; last_message: (Message & { sender: User }) | null }
+      Conversation & { participants: User[]; lastMessage: (Message & { sender: User }) | null }
     >
   > {
     try {
       const conversationUser: ConversationParticipant | undefined =
-        await db.conversation_participants.where('user_id').equals(userId).first();
+        await db.conversation_participants.where('userId').equals(userId).first();
 
       if (!conversationUser) {
         return [];
       }
 
-      const conversationId = conversationUser.conversation_id;
+      const conversationId = conversationUser.conversationId;
 
       const [conversations, allParticipantRecords, lastMessage] = await Promise.all([
         // Get conversations
@@ -121,7 +121,7 @@ export class DatabaseOperations {
 
         // Get all conversation participants
         db.conversation_participants
-          .where('conversation_id')
+          .where('conversationId')
           .equals(conversationId)
           .toArray(),
 
@@ -129,12 +129,12 @@ export class DatabaseOperations {
         this.getLastMessagesByConversation(conversationId),
       ]);
 
-      const userIds = allParticipantRecords.map((p) => p.user_id);
+      const userIds = allParticipantRecords.map((p) => p.userId);
       const users = await this.getUsers(userIds);
       const userMap = new Map(users.map((u) => [u.id, u]));
 
       const participants = allParticipantRecords.reduce<User[]>((acc, p) => {
-        const user = userMap.get(p.user_id);
+        const user = userMap.get(p.userId);
         if (user) acc.push(user);
         return acc;
       }, []);
@@ -142,7 +142,7 @@ export class DatabaseOperations {
       return conversations.map((conversation) => ({
         ...conversation,
         participants,
-        last_message: lastMessage,
+        lastMessage: lastMessage,
       }));
     } catch (error) {
       throw new Error(`Failed to get user conversations: ${error}`);
@@ -152,7 +152,7 @@ export class DatabaseOperations {
   // ===== MESSAGE OPERATIONS =====
   async upsertMessage(
     message: Partial<Message> &
-      Pick<Message, 'id' | 'content' | 'status' | 'sender_id' | 'conversation_id'>
+      Pick<Message, 'id' | 'content' | 'status' | 'senderId' | 'conversationId'>
   ): Promise<Message> {
     try {
       const existingMessage = await db.messages.get(message.id);
@@ -160,8 +160,8 @@ export class DatabaseOperations {
         const updatedMessage = {
           ...existingMessage,
           ...message,
-          created_at: ensureDate(existingMessage.created_at),
-          updated_at: message.updated_at ? ensureDate(message.updated_at) : new Date(),
+          createdAt: ensureDate(existingMessage.createdAt),
+          updatedAt: message.updatedAt ? ensureDate(message.updatedAt) : new Date(),
         };
         await db.messages.update(message.id, updatedMessage);
         return updatedMessage;
@@ -169,8 +169,8 @@ export class DatabaseOperations {
 
       const newMessage: Message = {
         ...message,
-        created_at: message.created_at ? ensureDate(message.created_at) : new Date(),
-        updated_at: message.updated_at ? ensureDate(message.updated_at) : new Date(),
+        createdAt: message.createdAt ? ensureDate(message.createdAt) : new Date(),
+        updatedAt: message.updatedAt ? ensureDate(message.updatedAt) : new Date(),
       };
       await db.messages.add(newMessage);
       return newMessage;
@@ -185,7 +185,7 @@ export class DatabaseOperations {
   async replaceTemporaryMessage(
     tempId: string,
     serverMessage: Partial<Message> &
-      Pick<Message, 'id' | 'content' | 'status' | 'sender_id' | 'conversation_id'>
+      Pick<Message, 'id' | 'content' | 'status' | 'senderId' | 'conversationId'>
   ): Promise<Message> {
     try {
       return await db.transaction('rw', [db.messages], async () => {
@@ -197,8 +197,8 @@ export class DatabaseOperations {
 
         const newMessage: Message = {
           ...serverMessage,
-          created_at: serverMessage.created_at ? ensureDate(serverMessage.created_at) : new Date(),
-          updated_at: serverMessage.updated_at ? ensureDate(serverMessage.updated_at) : new Date(),
+          createdAt: serverMessage.createdAt ? ensureDate(serverMessage.createdAt) : new Date(),
+          updatedAt: serverMessage.updatedAt ? ensureDate(serverMessage.updatedAt) : new Date(),
           tempId: undefined,
         };
         await db.messages.add(newMessage);
@@ -217,37 +217,37 @@ export class DatabaseOperations {
     conversationId: string,
     options: {
       limit?: number;
-      next_cursor?: string;
+      nextCursor?: string;
       after?: Date;
     } = {}
   ): Promise<Message[]> {
     try {
-      const { limit = 50, next_cursor, after } = options;
+      const { limit = 50, nextCursor, after } = options;
 
-      let query = db.messages.where('conversation_id').equals(conversationId);
+      let query = db.messages.where('conversationId').equals(conversationId);
 
-      if (next_cursor) {
-        query = query.and((message) => message.id < next_cursor);
+      if (nextCursor) {
+        query = query.and((message) => message.id < nextCursor);
       }
 
       if (after) {
-        query = query.and((message) => ensureDate(message.created_at) > after);
+        query = query.and((message) => ensureDate(message.createdAt) > after);
       }
 
       const messages = await query.toArray();
 
-      // Sort messages by created_at (primary) for chronological order
+      // Sort messages by createdAt (primary) for chronological order
       // When timestamps are equal, use sequence numbers to maintain order
       const sortedMessages = messages.sort((a, b) => {
-        const timeA = ensureDate(a.created_at).getTime();
-        const timeB = ensureDate(b.created_at).getTime();
+        const timeA = ensureDate(a.createdAt).getTime();
+        const timeB = ensureDate(b.createdAt).getTime();
 
         if (timeA !== timeB) {
           return timeA - timeB;
         }
 
-        const seqA = a.sequence_number ?? 0;
-        const seqB = b.sequence_number ?? 0;
+        const seqA = a.sequenceNumber ?? 0;
+        const seqB = b.sequenceNumber ?? 0;
         return seqA - seqB;
       });
       return sortedMessages.slice(-limit);
@@ -265,9 +265,9 @@ export class DatabaseOperations {
       if (!oldestMessage) return false;
 
       const olderMessagesCount = await db.messages
-        .where('conversation_id')
+        .where('conversationId')
         .equals(conversationId)
-        .and((message) => ensureDate(message.created_at) < ensureDate(oldestMessage.created_at))
+        .and((message) => ensureDate(message.createdAt) < ensureDate(oldestMessage.createdAt))
         .count();
 
       return olderMessagesCount > 0;
@@ -294,14 +294,14 @@ export class DatabaseOperations {
    */
   async upsertPaginationMetadata(
     conversationId: string,
-    metadata: Omit<PaginationMetadata, 'conversation_id' | 'updated_at'>
+    metadata: Omit<PaginationMetadata, 'conversationId' | 'updatedAt'>
   ): Promise<PaginationMetadata> {
     try {
       const existingMetadata = await db.pagination_metadata.get(conversationId);
       const paginationMetadata = {
-        conversation_id: conversationId,
+        conversationId: conversationId,
         ...metadata,
-        updated_at: new Date(),
+        updatedAt: new Date(),
       };
       if (existingMetadata) {
         await db.pagination_metadata.update(conversationId, paginationMetadata);
@@ -369,8 +369,8 @@ export class DatabaseOperations {
     try {
       // Check if participant already exists
       const existing = await db.conversation_participants
-        .where('[conversation_id+user_id]')
-        .equals([participant.conversation_id, participant.user_id])
+        .where('[conversationId+userId]')
+        .equals([participant.conversationId, participant.userId])
         .first();
 
       if (existing) {
@@ -391,14 +391,14 @@ export class DatabaseOperations {
    * Create a new send message request
    */
   async createSendMessageRequest(
-    request: Omit<SendMessageRequest, 'id' | 'created_at'>
+    request: Omit<SendMessageRequest, 'id' | 'createdAt'>
   ): Promise<SendMessageRequest> {
     try {
-      const id = `${request.message_id}_${Date.now()}`;
+      const id = `${request.messageId}_${Date.now()}`;
       const newRequest: SendMessageRequest = {
         ...request,
         id,
-        created_at: new Date(),
+        createdAt: new Date(),
       };
       await db.send_message_requests.add(newRequest);
       return newRequest;
@@ -414,7 +414,7 @@ export class DatabaseOperations {
     try {
       const requests = await db.send_message_requests.where('status').equals('pending').toArray();
       return requests.sort(
-        (a, b) => ensureDate(a.created_at).getTime() - ensureDate(b.created_at).getTime()
+        (a, b) => ensureDate(a.createdAt).getTime() - ensureDate(b.createdAt).getTime()
       );
     } catch (error) {
       throw new Error(`Failed to get pending send requests: ${error}`);
@@ -432,14 +432,14 @@ export class DatabaseOperations {
     try {
       const updates: Partial<SendMessageRequest> = {
         status,
-        last_sent_at: new Date(),
+        lastSentAt: new Date(),
       };
 
       if (status === 'failed') {
         const request = await db.send_message_requests.get(requestId);
         if (request) {
-          updates.retry_count = request.retry_count + 1;
-          updates.error_message = errorMessage;
+          updates.retryCount = request.retryCount + 1;
+          updates.errorMessage = errorMessage;
         }
       }
 
@@ -465,7 +465,7 @@ export class DatabaseOperations {
    */
   async getSendRequestByMessageId(messageId: string): Promise<SendMessageRequest | undefined> {
     try {
-      return await db.send_message_requests.where('message_id').equals(messageId).first();
+      return await db.send_message_requests.where('messageId').equals(messageId).first();
     } catch (error) {
       throw new Error(`Failed to get send request by message ID: ${error}`);
     }
@@ -481,7 +481,7 @@ export class DatabaseOperations {
       const requests = await db.send_message_requests.where('status').equals(status).toArray();
 
       return requests.sort(
-        (a, b) => ensureDate(a.created_at).getTime() - ensureDate(b.created_at).getTime()
+        (a, b) => ensureDate(a.createdAt).getTime() - ensureDate(b.createdAt).getTime()
       );
     } catch (error) {
       throw new Error(`Failed to get send requests by status: ${error}`);
@@ -500,7 +500,7 @@ export class DatabaseOperations {
           .where('status')
           .equals('failed')
           .and(
-            (message) => message.tempId !== undefined && ensureDate(message.created_at) < cutoffTime
+            (message) => message.tempId !== undefined && ensureDate(message.createdAt) < cutoffTime
           )
           .toArray();
 
@@ -533,7 +533,7 @@ export class DatabaseOperations {
 
         // Get all send request message IDs
         const sendRequests = await db.send_message_requests.toArray();
-        const activeMessageIds = new Set(sendRequests.map((req) => req.message_id));
+        const activeMessageIds = new Set(sendRequests.map((req) => req.messageId));
 
         // Find orphaned messages (temp messages without send requests)
         const orphanedMessages = tempMessages.filter(
@@ -556,29 +556,29 @@ export class DatabaseOperations {
    * Save or update a draft message for a conversation
    */
   async saveDraftMessage(
-    draft: Omit<DraftMessage, 'id' | 'created_at' | 'updated_at'>
+    draft: Omit<DraftMessage, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<DraftMessage> {
     try {
       const existingDraft = await db.draft_messages
-        .where('[conversation_id+user_id]')
-        .equals([draft.conversation_id, draft.user_id])
+        .where('[conversationId+userId]')
+        .equals([draft.conversationId, draft.userId])
         .first();
 
       if (existingDraft) {
         const updatedDraft = {
           ...existingDraft,
           content: draft.content,
-          updated_at: new Date(),
+          updatedAt: new Date(),
         };
         await db.draft_messages.update(existingDraft.id, updatedDraft);
         return updatedDraft;
       }
 
       const newDraft: DraftMessage = {
-        id: `draft_${draft.conversation_id}_${draft.user_id}_${Date.now()}`,
+        id: `draft_${draft.conversationId}_${draft.userId}_${Date.now()}`,
         ...draft,
-        created_at: new Date(),
-        updated_at: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
       await db.draft_messages.add(newDraft);
       return newDraft;
@@ -593,7 +593,7 @@ export class DatabaseOperations {
   async getDraftMessage(conversationId: string, userId: string): Promise<DraftMessage | undefined> {
     try {
       return await db.draft_messages
-        .where('[conversation_id+user_id]')
+        .where('[conversationId+userId]')
         .equals([conversationId, userId])
         .first();
     } catch (error) {
@@ -607,7 +607,7 @@ export class DatabaseOperations {
   async deleteDraftMessage(conversationId: string, userId: string): Promise<void> {
     try {
       const existingDraft = await db.draft_messages
-        .where('[conversation_id+user_id]')
+        .where('[conversationId+userId]')
         .equals([conversationId, userId])
         .first();
 
@@ -640,7 +640,7 @@ export class DatabaseOperations {
 
       const oldestAge =
         tempMessages.length > 0
-          ? Math.max(...tempMessages.map((m) => Date.now() - ensureDate(m.created_at).getTime()))
+          ? Math.max(...tempMessages.map((m) => Date.now() - ensureDate(m.createdAt).getTime()))
           : null;
 
       return {

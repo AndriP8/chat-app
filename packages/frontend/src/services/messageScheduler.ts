@@ -130,9 +130,9 @@ export class MessageScheduler {
   async queueMessage(messageId: string): Promise<SendMessageRequest> {
     try {
       const request = await dbOps.createSendMessageRequest({
-        message_id: messageId,
+        messageId: messageId,
         status: 'pending',
-        retry_count: 0,
+        retryCount: 0,
       });
 
       // Request background sync if available
@@ -196,13 +196,13 @@ export class MessageScheduler {
       const currentTime = now.getTime();
 
       return failedRequests.filter((request: SendMessageRequest) => {
-        if (request.retry_count >= this.config.maxRetries) {
+        if (request.retryCount >= this.config.maxRetries) {
           return false;
         }
 
-        // Use retry_count - 1 because retry_count was already incremented when the message failed
-        const expectedDelay = this.calculateRetryDelay(request.retry_count - 1);
-        const lastAttemptTime = ensureDate(request.last_sent_at || request.created_at).getTime();
+        // Use retryCount - 1 because retryCount was already incremented when the message failed
+        const expectedDelay = this.calculateRetryDelay(request.retryCount - 1);
+        const lastAttemptTime = ensureDate(request.lastSentAt || request.createdAt).getTime();
         const nextRetryTime = lastAttemptTime + expectedDelay;
 
         return currentTime >= nextRetryTime;
@@ -249,8 +249,8 @@ export class MessageScheduler {
 
       // Update message status to failed if max retries exceeded
       const updatedRequest = await dbOps.db.send_message_requests.get(request.id);
-      if (updatedRequest && updatedRequest.retry_count >= this.config.maxRetries) {
-        await dbOps.updateMessageStatus(request.message_id, 'failed');
+      if (updatedRequest && updatedRequest.retryCount >= this.config.maxRetries) {
+        await dbOps.updateMessageStatus(request.messageId, 'failed');
 
         // Notify user of permanent failure
         if (this.errorCallback) {
@@ -260,11 +260,11 @@ export class MessageScheduler {
           } else if (isNetworkError) {
             userMessage = 'Network error - message could not be delivered';
           }
-          this.errorCallback(userMessage, request.message_id);
+          this.errorCallback(userMessage, request.messageId);
         }
       } else {
         console.warn(
-          `Message send failed, will retry (${updatedRequest?.retry_count || 0}/${this.config.maxRetries}): ${request.message_id}`,
+          `Message send failed, will retry (${updatedRequest?.retryCount || 0}/${this.config.maxRetries}): ${request.messageId}`,
           { error: errorMessage, isTimeout: isTimeoutError, isNetwork: isNetworkError }
         );
       }
@@ -307,7 +307,7 @@ export class MessageScheduler {
       const failedRequests = await dbOps.getSendRequestsByStatus('failed');
 
       const totalRetries = failedRequests.reduce(
-        (sum: number, req: SendMessageRequest) => sum + req.retry_count,
+        (sum: number, req: SendMessageRequest) => sum + req.retryCount,
         0
       );
 
@@ -346,7 +346,7 @@ export class MessageScheduler {
     try {
       // Find send_message_request by message_id
       const allRequests = await dbOps.db.send_message_requests.toArray();
-      const request = allRequests.find((req) => req.message_id === messageId);
+      const request = allRequests.find((req) => req.messageId === messageId);
 
       if (request) {
         await dbOps.deleteSendRequest(request.id);

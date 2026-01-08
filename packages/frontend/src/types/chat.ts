@@ -20,11 +20,11 @@ export interface UIMessage extends Message {
 export interface ChatRoom {
   id: string;
   name: string | null;
-  created_by: string;
+  createdBy: string;
   participants: User[];
-  last_message?: Message | null;
-  created_at: string;
-  updated_at: string;
+  lastMessage?: Message | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // API Request/Response types
@@ -41,7 +41,7 @@ export interface SendMessageRequest {
 
 export interface GetMessagesQuery {
   limit?: number;
-  next_cursor?: string;
+  nextCursor?: string;
 }
 
 export interface ApiResponse<T> {
@@ -63,7 +63,7 @@ export type ConversationResponse = ChatRoom;
 export interface MessagesResponse {
   data: Message[];
   hasMore: boolean;
-  next_cursor: string | null;
+  nextCursor: string | null;
 }
 
 export type MessageResponse = Message;

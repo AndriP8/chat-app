@@ -23,8 +23,8 @@ export const conversationApi = {
     if (query.limit) {
       searchParams.append('limit', query.limit.toString());
     }
-    if (query.next_cursor) {
-      searchParams.append('next_cursor', query.next_cursor);
+    if (query.nextCursor) {
+      searchParams.append('nextCursor', query.nextCursor);
     }
 
     const queryString = searchParams.toString();
@@ -36,7 +36,7 @@ export const conversationApi = {
     return {
       messages: response.data,
       hasMore: response.hasMore,
-      nextCursor: response.next_cursor,
+      nextCursor: response.nextCursor,
     };
   },
 };

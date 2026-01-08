@@ -156,7 +156,7 @@ export const MessageList = ({
       const newMessages = messages.slice(previousLength);
 
       const newUnreadMessages = newMessages.filter(
-        (message) => message.sender_id !== currentUser.id && message.status !== 'read'
+        (message) => message.senderId !== currentUser.id && message.status !== 'read'
       );
 
       for (const message of newUnreadMessages) {
@@ -178,7 +178,7 @@ export const MessageList = ({
     const unreadMessages = messages.filter(
       (message, index) =>
         visibleIndexes.has(index) &&
-        message.sender_id !== currentUser.id &&
+        message.senderId !== currentUser.id &&
         message.status !== 'read'
     );
 
@@ -251,9 +251,9 @@ export const MessageList = ({
         >
           {virtualizer.getVirtualItems().map((virtualItem) => {
             const message = messages[virtualItem.index];
-            const isOwn = message.sender_id === currentUser?.id;
+            const isOwn = message.senderId === currentUser?.id;
             const prevMessage = virtualItem.index > 0 ? messages[virtualItem.index - 1] : null;
-            const showAvatar = !prevMessage || prevMessage.sender_id !== message.sender_id;
+            const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
 
             return (
               <div

@@ -1,72 +1,72 @@
 export interface User {
   id: string;
   email: string;
-  password_hash?: string;
+  passwordHash?: string;
   name: string;
-  profile_picture_url?: string;
-  is_demo?: boolean;
-  created_at: Date;
-  updated_at: Date;
+  profilePictureUrl?: string;
+  isDemo?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Conversation {
   id: string;
   name?: string;
-  created_by: string;
-  created_at: Date;
-  updated_at: Date;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Message {
   id: string;
   content: string;
   status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
-  created_at: Date;
-  updated_at: Date;
-  sender_id: string;
-  conversation_id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  senderId: string;
+  conversationId: string;
   tempId?: string;
-  sequence_number?: number;
+  sequenceNumber?: number;
 }
 
 export interface ConversationParticipant {
-  conversation_id: string;
-  user_id: string;
+  conversationId: string;
+  userId: string;
 }
 
 // Client-side only entities (not synced to server)
 export interface DraftMessage {
   id: string;
-  conversation_id: string;
-  user_id: string;
+  conversationId: string;
+  userId: string;
   content: string;
-  created_at: Date;
-  updated_at: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface SendMessageRequest {
   id: string;
-  message_id: string;
+  messageId: string;
   status: 'pending' | 'in_flight' | 'failed';
-  last_sent_at?: Date;
-  retry_count: number;
-  error_message?: string;
-  created_at: Date;
+  lastSentAt?: Date;
+  retryCount: number;
+  errorMessage?: string;
+  createdAt: Date;
 }
 
 export interface SequenceCounter {
-  conversation_id: string;
-  user_id: string;
-  next_sequence: number;
-  updated_at: Date;
+  conversationId: string;
+  userId: string;
+  nextSequence: number;
+  updatedAt: Date;
 }
 
 export interface PaginationMetadata {
-  conversation_id: string;
-  has_more: boolean;
-  next_cursor: string | null;
-  last_message_id: string | null;
-  updated_at: Date;
+  conversationId: string;
+  hasMore: boolean;
+  nextCursor: string | null;
+  lastMessageId: string | null;
+  updatedAt: Date;
 }
 
 // Database schema types for Dexie

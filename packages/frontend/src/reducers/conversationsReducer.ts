@@ -216,7 +216,7 @@ export function conversationsReducer(
       }
 
       const allMessages = Array.from(messageMap.values()).sort(
-        (a, b) => a.created_at.getTime() - b.created_at.getTime()
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
       );
 
       return {

@@ -34,9 +34,9 @@ export const loadPersistedAuthState = (): AuthState => {
       id: validUserData.id,
       name: validUserData.name,
       email: '', // Will be fetched from server when needed
-      profile_picture_url: validUserData.profilePictureUrl,
-      created_at: new Date(), // Placeholder
-      updated_at: new Date(), // Placeholder
+      profilePictureUrl: validUserData.profilePictureUrl,
+      createdAt: new Date(), // Placeholder
+      updatedAt: new Date(), // Placeholder
     };
 
     return {
@@ -53,15 +53,15 @@ interface MinimalUserData {
   id: string;
   name: string;
   profilePictureUrl?: string;
-  is_demo?: boolean;
+  isDemo?: boolean;
 }
 
 export function createMinimalUserData(user: User): MinimalUserData {
   return {
     id: user.id,
     name: user.name,
-    profilePictureUrl: user.profile_picture_url,
-    is_demo: user.is_demo,
+    profilePictureUrl: user.profilePictureUrl,
+    isDemo: user.isDemo,
   };
 }
 

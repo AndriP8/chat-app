@@ -41,8 +41,8 @@ export class DraftMessageService {
     }
 
     return await dbOps.saveDraftMessage({
-      conversation_id: conversationId,
-      user_id: userId,
+      conversationId: conversationId,
+      userId: userId,
       content: content.trim(),
     });
   }

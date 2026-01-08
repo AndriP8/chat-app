@@ -11,7 +11,7 @@ export const ChatHeader = ({ room }: ChatHeaderProps) => {
     (participant) => participant.id !== currentUser?.id
   );
   const displayName = recipientParticipant?.name || 'Unknown';
-  const avatar = recipientParticipant?.profile_picture_url;
+  const avatar = recipientParticipant?.profilePictureUrl;
 
   return (
     <div className="flex items-center justify-between border-gray-200 border-b bg-white p-4 dark:border-gray-700 dark:bg-gray-800">

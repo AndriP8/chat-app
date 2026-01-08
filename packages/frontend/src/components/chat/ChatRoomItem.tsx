@@ -17,10 +17,10 @@ export const ChatRoomItem = ({ room, isSelected, onClick }: ChatRoomItemProps) =
 
   const chatPartner = room.participants.find((participant) => participant.id !== currentUser.id);
   const displayName = chatPartner?.name || 'Unknown';
-  const avatar = chatPartner?.profile_picture_url;
+  const avatar = chatPartner?.profilePictureUrl;
 
-  const lastMessage = room.last_message;
-  const lastMessageTime = lastMessage ? formatMessageTime(new Date(lastMessage.created_at)) : '';
+  const lastMessage = room.lastMessage;
+  const lastMessageTime = lastMessage ? formatMessageTime(new Date(lastMessage.createdAt)) : '';
 
   return (
     <button
@@ -62,7 +62,7 @@ export const ChatRoomItem = ({ room, isSelected, onClick }: ChatRoomItemProps) =
           {lastMessage && (
             <div className="flex items-center gap-2">
               <p className="flex-1 truncate text-gray-600 text-sm dark:text-gray-400">
-                {room.participants.some((participant) => participant.id === lastMessage.sender_id)
+                {room.participants.some((participant) => participant.id === lastMessage.senderId)
                   ? lastMessage.content
                   : `You: ${lastMessage.content}`}
               </p>

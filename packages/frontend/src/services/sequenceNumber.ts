@@ -11,20 +11,20 @@ export async function getNextSequenceNumber(
       let nextSequence: number;
 
       if (existingCounter) {
-        nextSequence = existingCounter.next_sequence;
+        nextSequence = existingCounter.nextSequence;
         await db.sequence_counters.put({
-          conversation_id: conversationId,
-          user_id: userId,
-          next_sequence: nextSequence + 1,
-          updated_at: new Date(),
+          conversationId: conversationId,
+          userId: userId,
+          nextSequence: nextSequence + 1,
+          updatedAt: new Date(),
         });
       } else {
         nextSequence = 1;
         await db.sequence_counters.put({
-          conversation_id: conversationId,
-          user_id: userId,
-          next_sequence: 2, // Next one will be 2
-          updated_at: new Date(),
+          conversationId: conversationId,
+          userId: userId,
+          nextSequence: 2, // Next one will be 2
+          updatedAt: new Date(),
         });
       }
 

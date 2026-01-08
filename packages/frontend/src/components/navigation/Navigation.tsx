@@ -10,7 +10,7 @@ export function Navigation() {
 
   return (
     <>
-      {currentUser?.is_demo && <DemoBanner />}
+      {currentUser?.isDemo && <DemoBanner />}
       <nav className="sticky top-0 z-10 border-gray-200 border-b bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 justify-between">

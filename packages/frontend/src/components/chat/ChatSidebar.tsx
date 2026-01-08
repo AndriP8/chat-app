@@ -22,23 +22,23 @@ export const ChatSidebar = ({
       const roomMessages = messages[room.id];
       if (roomMessages && roomMessages.length > 0) {
         const latestMessage = [...roomMessages].sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )[0];
 
         if (latestMessage) {
           return {
             ...room,
-            last_message: {
+            lastMessage: {
               id: latestMessage.id,
               content: latestMessage.content,
-              sender_id: latestMessage.sender_id,
-              conversation_id: latestMessage.conversation_id,
+              senderId: latestMessage.senderId,
+              conversationId: latestMessage.conversationId,
               status: latestMessage.status,
-              created_at: latestMessage.created_at,
-              updated_at: latestMessage.updated_at,
+              createdAt: latestMessage.createdAt,
+              updatedAt: latestMessage.updatedAt,
               sender: latestMessage.sender,
             },
-            updated_at: latestMessage.created_at.toISOString(),
+            updatedAt: new Date(latestMessage.createdAt).toISOString(),
           };
         }
       }
@@ -47,12 +47,12 @@ export const ChatSidebar = ({
   }, [rooms, messages]);
   const sortedRooms = useMemo(() => {
     return [...roomsWithLatestMessages].sort((a, b) => {
-      const aTime = a.last_message
-        ? new Date(a.last_message.created_at).getTime()
-        : new Date(a.updated_at).getTime();
-      const bTime = b.last_message
-        ? new Date(b.last_message.created_at).getTime()
-        : new Date(b.updated_at).getTime();
+      const aTime = a.lastMessage
+        ? new Date(a.lastMessage.createdAt).getTime()
+        : new Date(a.updatedAt).getTime();
+      const bTime = b.lastMessage
+        ? new Date(b.lastMessage.createdAt).getTime()
+        : new Date(b.updatedAt).getTime();
       return bTime - aTime;
     });
   }, [roomsWithLatestMessages]);

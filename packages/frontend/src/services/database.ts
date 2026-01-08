@@ -15,15 +15,16 @@ class ChatDatabase extends Dexie {
   users!: EntityTable<User, 'id'>;
   conversations!: EntityTable<Conversation, 'id'>;
   messages!: EntityTable<Message, 'id'>;
-  conversation_participants!: EntityTable<ConversationParticipant, 'conversation_id'>;
+  conversation_participants!: EntityTable<ConversationParticipant, 'conversationId'>;
   draft_messages!: EntityTable<DraftMessage, 'id'>;
   send_message_requests!: EntityTable<SendMessageRequest, 'id'>;
-  sequence_counters!: EntityTable<SequenceCounter, 'conversation_id' | 'user_id'>;
-  pagination_metadata!: EntityTable<PaginationMetadata, 'conversation_id'>;
+  sequence_counters!: EntityTable<SequenceCounter, 'conversationId' | 'userId'>;
+  pagination_metadata!: EntityTable<PaginationMetadata, 'conversationId'>;
 
   constructor() {
     super('ChatAppDatabase');
 
+    // Version 1 & 2: Old schema with snake_case (kept for migration compatibility)
     this.version(1).stores({
       users: 'id, email, name, created_at',
       conversations: 'id, created_by, created_at, updated_at',
@@ -36,66 +37,269 @@ class ChatDatabase extends Dexie {
       pagination_metadata: 'conversation_id, updated_at',
     });
 
-    // Add hooks for automatic timestamp updates
+    // Version 3: New schema with camelCase
+    this.version(3)
+      .stores({
+        users: 'id, email, name, createdAt',
+        conversations: 'id, createdBy, createdAt, updatedAt',
+        messages:
+          'id, conversationId, senderId, status, createdAt, tempId, [conversationId+senderId+sequenceNumber]',
+        conversation_participants: '[conversationId+userId], conversationId, userId',
+        draft_messages: 'id, conversationId, userId, [conversationId+userId], updatedAt',
+        send_message_requests: 'id, messageId, status, createdAt, lastSentAt',
+        sequence_counters: '[conversationId+userId], conversationId, userId, updatedAt',
+        pagination_metadata: 'conversationId, updatedAt',
+      })
+      .upgrade(async (tx) => {
+        // Migrate users table
+        await tx
+          .table('users')
+          .toCollection()
+          .modify((user: any) => {
+            if (user.created_at) {
+              user.createdAt = user.created_at;
+              delete user.created_at;
+            }
+            if (user.updated_at) {
+              user.updatedAt = user.updated_at;
+              delete user.updated_at;
+            }
+            if (user.profile_picture_url !== undefined) {
+              user.profilePictureUrl = user.profile_picture_url;
+              delete user.profile_picture_url;
+            }
+            if (user.is_demo !== undefined) {
+              user.isDemo = user.is_demo;
+              delete user.is_demo;
+            }
+            if (user.password_hash !== undefined) {
+              user.passwordHash = user.password_hash;
+              delete user.password_hash;
+            }
+          });
+
+        // Migrate conversations table
+        await tx
+          .table('conversations')
+          .toCollection()
+          .modify((conversation: any) => {
+            if (conversation.created_by) {
+              conversation.createdBy = conversation.created_by;
+              delete conversation.created_by;
+            }
+            if (conversation.created_at) {
+              conversation.createdAt = conversation.created_at;
+              delete conversation.created_at;
+            }
+            if (conversation.updated_at) {
+              conversation.updatedAt = conversation.updated_at;
+              delete conversation.updated_at;
+            }
+          });
+
+        // Migrate messages table
+        await tx
+          .table('messages')
+          .toCollection()
+          .modify((message: any) => {
+            if (message.conversation_id) {
+              message.conversationId = message.conversation_id;
+              delete message.conversation_id;
+            }
+            if (message.sender_id) {
+              message.senderId = message.sender_id;
+              delete message.sender_id;
+            }
+            if (message.created_at) {
+              message.createdAt = message.created_at;
+              delete message.created_at;
+            }
+            if (message.updated_at) {
+              message.updatedAt = message.updated_at;
+              delete message.updated_at;
+            }
+            if (message.sequence_number !== undefined) {
+              message.sequenceNumber = message.sequence_number;
+              delete message.sequence_number;
+            }
+          });
+
+        // Migrate conversation_participants table
+        await tx
+          .table('conversation_participants')
+          .toCollection()
+          .modify((participant: any) => {
+            if (participant.conversation_id) {
+              participant.conversationId = participant.conversation_id;
+              delete participant.conversation_id;
+            }
+            if (participant.user_id) {
+              participant.userId = participant.user_id;
+              delete participant.user_id;
+            }
+          });
+
+        // Migrate draft_messages table
+        await tx
+          .table('draft_messages')
+          .toCollection()
+          .modify((draft: any) => {
+            if (draft.conversation_id) {
+              draft.conversationId = draft.conversation_id;
+              delete draft.conversation_id;
+            }
+            if (draft.user_id) {
+              draft.userId = draft.user_id;
+              delete draft.user_id;
+            }
+            if (draft.created_at) {
+              draft.createdAt = draft.created_at;
+              delete draft.created_at;
+            }
+            if (draft.updated_at) {
+              draft.updatedAt = draft.updated_at;
+              delete draft.updated_at;
+            }
+          });
+
+        // Migrate send_message_requests table
+        await tx
+          .table('send_message_requests')
+          .toCollection()
+          .modify((request: any) => {
+            if (request.message_id) {
+              request.messageId = request.message_id;
+              delete request.message_id;
+            }
+            if (request.last_sent_at !== undefined) {
+              request.lastSentAt = request.last_sent_at;
+              delete request.last_sent_at;
+            }
+            if (request.retry_count !== undefined) {
+              request.retryCount = request.retry_count;
+              delete request.retry_count;
+            }
+            if (request.error_message !== undefined) {
+              request.errorMessage = request.error_message;
+              delete request.error_message;
+            }
+            if (request.created_at) {
+              request.createdAt = request.created_at;
+              delete request.created_at;
+            }
+          });
+
+        // Migrate sequence_counters table
+        await tx
+          .table('sequence_counters')
+          .toCollection()
+          .modify((counter: any) => {
+            if (counter.conversation_id) {
+              counter.conversationId = counter.conversation_id;
+              delete counter.conversation_id;
+            }
+            if (counter.user_id) {
+              counter.userId = counter.user_id;
+              delete counter.user_id;
+            }
+            if (counter.next_sequence !== undefined) {
+              counter.nextSequence = counter.next_sequence;
+              delete counter.next_sequence;
+            }
+            if (counter.updated_at) {
+              counter.updatedAt = counter.updated_at;
+              delete counter.updated_at;
+            }
+          });
+
+        // Migrate pagination_metadata table
+        await tx
+          .table('pagination_metadata')
+          .toCollection()
+          .modify((metadata: any) => {
+            if (metadata.conversation_id) {
+              metadata.conversationId = metadata.conversation_id;
+              delete metadata.conversation_id;
+            }
+            if (metadata.has_more !== undefined) {
+              metadata.hasMore = metadata.has_more;
+              delete metadata.has_more;
+            }
+            if (metadata.next_cursor !== undefined) {
+              metadata.nextCursor = metadata.next_cursor;
+              delete metadata.next_cursor;
+            }
+            if (metadata.last_message_id !== undefined) {
+              metadata.lastMessageId = metadata.last_message_id;
+              delete metadata.last_message_id;
+            }
+            if (metadata.updated_at) {
+              metadata.updatedAt = metadata.updated_at;
+              delete metadata.updated_at;
+            }
+          });
+      });
+
+    // Add hooks for automatic timestamp updates (using camelCase)
     this.users.hook('creating', (_primKey, obj, _trans) => {
-      if (!obj.created_at) obj.created_at = new Date();
-      if (!obj.updated_at) obj.updated_at = new Date();
+      if (!obj.createdAt) obj.createdAt = new Date();
+      if (!obj.updatedAt) obj.updatedAt = new Date();
     });
 
     this.users.hook('updating', (modifications, _primKey, _obj, _trans) => {
       const mods = modifications as Partial<User>;
-      if (!mods.updated_at) mods.updated_at = new Date();
+      if (!mods.updatedAt) mods.updatedAt = new Date();
     });
 
     this.conversations.hook('creating', (_primKey, obj, _trans) => {
-      if (!obj.created_at) obj.created_at = new Date();
-      if (!obj.updated_at) obj.updated_at = new Date();
+      if (!obj.createdAt) obj.createdAt = new Date();
+      if (!obj.updatedAt) obj.updatedAt = new Date();
     });
 
     this.conversations.hook('updating', (modifications, _primKey, _obj, _trans) => {
       const mods = modifications as Partial<Conversation>;
-      if (!mods.updated_at) mods.updated_at = new Date();
+      if (!mods.updatedAt) mods.updatedAt = new Date();
     });
 
     this.messages.hook('creating', (_primKey, obj, _trans) => {
-      if (!obj.created_at) obj.created_at = new Date();
-      if (!obj.updated_at) obj.updated_at = new Date();
+      if (!obj.createdAt) obj.createdAt = new Date();
+      if (!obj.updatedAt) obj.updatedAt = new Date();
     });
 
     this.messages.hook('updating', (modifications, _primKey, _obj, _trans) => {
       const mods = modifications as Partial<Message>;
-      if (!mods.updated_at) mods.updated_at = new Date();
+      if (!mods.updatedAt) mods.updatedAt = new Date();
     });
 
     this.draft_messages.hook('creating', (_primKey, obj, _trans) => {
-      obj.created_at = new Date();
-      obj.updated_at = new Date();
+      obj.createdAt = new Date();
+      obj.updatedAt = new Date();
     });
 
     this.draft_messages.hook('updating', (modifications, _primKey, _obj, _trans) => {
-      (modifications as Partial<DraftMessage>).updated_at = new Date();
+      (modifications as Partial<DraftMessage>).updatedAt = new Date();
     });
 
     this.send_message_requests.hook('creating', (_primKey, obj, _trans) => {
-      obj.created_at = new Date();
+      obj.createdAt = new Date();
     });
 
     this.sequence_counters.hook('creating', (_primKey, obj, _trans) => {
-      if (!obj.updated_at) obj.updated_at = new Date();
+      if (!obj.updatedAt) obj.updatedAt = new Date();
     });
 
     this.sequence_counters.hook('updating', (modifications, _primKey, _obj, _trans) => {
       const mods = modifications as Partial<SequenceCounter>;
-      if (!mods.updated_at) mods.updated_at = new Date();
+      if (!mods.updatedAt) mods.updatedAt = new Date();
     });
 
     this.pagination_metadata.hook('creating', (_primKey, obj, _trans) => {
-      if (!obj.updated_at) obj.updated_at = new Date();
+      if (!obj.updatedAt) obj.updatedAt = new Date();
     });
 
     this.pagination_metadata.hook('updating', (modifications, _primKey, _obj, _trans) => {
       const mods = modifications as Partial<PaginationMetadata>;
-      if (!mods.updated_at) mods.updated_at = new Date();
+      if (!mods.updatedAt) mods.updatedAt = new Date();
     });
   }
 
