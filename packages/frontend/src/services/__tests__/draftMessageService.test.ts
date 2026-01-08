@@ -47,8 +47,8 @@ describe('DraftMessageService', () => {
       draft = await service.getDraft(conversationId, userId);
       expect(draft).toBeDefined();
       expect(draft?.content).toBe('Test draft');
-      expect(draft?.conversation_id).toBe(conversationId);
-      expect(draft?.user_id).toBe(userId);
+      expect(draft?.conversationId).toBe(conversationId);
+      expect(draft?.userId).toBe(userId);
     });
 
     it('should cancel previous timeout when called again', async () => {
@@ -152,8 +152,8 @@ describe('DraftMessageService', () => {
     it('should retrieve saved draft', async () => {
       const draftContent = 'My draft message';
       await dbOps.saveDraftMessage({
-        conversation_id: conversationId,
-        user_id: userId,
+        conversationId: conversationId,
+        userId: userId,
         content: draftContent,
       });
 
@@ -161,8 +161,8 @@ describe('DraftMessageService', () => {
 
       expect(draft).toBeDefined();
       expect(draft?.content).toBe(draftContent);
-      expect(draft?.conversation_id).toBe(conversationId);
-      expect(draft?.user_id).toBe(userId);
+      expect(draft?.conversationId).toBe(conversationId);
+      expect(draft?.userId).toBe(userId);
     });
 
     it('should return undefined if no draft exists', async () => {
@@ -173,14 +173,14 @@ describe('DraftMessageService', () => {
 
     it('should get correct draft for specific conversation', async () => {
       await dbOps.saveDraftMessage({
-        conversation_id: 'conv-1',
-        user_id: userId,
+        conversationId: 'conv-1',
+        userId: userId,
         content: 'Draft 1',
       });
 
       await dbOps.saveDraftMessage({
-        conversation_id: 'conv-2',
-        user_id: userId,
+        conversationId: 'conv-2',
+        userId: userId,
         content: 'Draft 2',
       });
 
@@ -195,8 +195,8 @@ describe('DraftMessageService', () => {
   describe('deleteDraft', () => {
     it('should delete draft from database', async () => {
       await dbOps.saveDraftMessage({
-        conversation_id: conversationId,
-        user_id: userId,
+        conversationId: conversationId,
+        userId: userId,
         content: 'Draft to delete',
       });
 
@@ -243,8 +243,8 @@ describe('DraftMessageService', () => {
 
     it('should handle multiple deletions gracefully', async () => {
       await dbOps.saveDraftMessage({
-        conversation_id: conversationId,
-        user_id: userId,
+        conversationId: conversationId,
+        userId: userId,
         content: 'Draft',
       });
 

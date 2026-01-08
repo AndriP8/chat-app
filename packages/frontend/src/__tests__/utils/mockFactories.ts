@@ -28,8 +28,8 @@ export function createMockUser(overrides?: Partial<User>): User {
     id,
     name: `Test User ${userIdCounter}`,
     email: `user${userIdCounter}@test.com`,
-    created_at: new Date(),
-    updated_at: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
   };
 }
@@ -41,9 +41,9 @@ export function createMockConversation(overrides?: Partial<Conversation>): Conve
   const id = overrides?.id || `conv-${++conversationIdCounter}`;
   return {
     id,
-    created_by: 'user-1',
-    created_at: new Date(),
-    updated_at: new Date(),
+    createdBy: 'user-1',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
   };
 }
@@ -53,18 +53,18 @@ export function createMockConversation(overrides?: Partial<Conversation>): Conve
  */
 export function createMockMessage(overrides?: Partial<Message>): Message {
   const id = overrides?.id || `msg-${++messageIdCounter}`;
-  const conversation_id = overrides?.conversation_id || 'conv-1';
-  const sender_id = overrides?.sender_id || 'user-1';
+  const conversationId = overrides?.conversationId || 'conv-1';
+  const senderId = overrides?.senderId || 'user-1';
 
   return {
     id,
-    conversation_id,
-    sender_id,
+    conversationId,
+    senderId,
     content: `Test message ${messageIdCounter}`,
     status: 'sent',
-    created_at: new Date(),
-    updated_at: new Date(),
-    sequence_number: overrides?.sequence_number ?? messageIdCounter,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    sequenceNumber: overrides?.sequenceNumber ?? messageIdCounter,
     ...overrides,
   };
 }
@@ -75,11 +75,11 @@ export function createMockMessage(overrides?: Partial<Message>): Message {
 export function createMockDraft(overrides?: Partial<DraftMessage>): DraftMessage {
   return {
     id: `draft-${Date.now()}-${Math.random()}`,
-    conversation_id: overrides?.conversation_id || 'conv-1',
-    user_id: overrides?.user_id || 'user-1',
+    conversationId: overrides?.conversationId || 'conv-1',
+    userId: overrides?.userId || 'user-1',
     content: overrides?.content || 'Draft message content',
-    created_at: new Date(),
-    updated_at: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
   };
 }
@@ -90,11 +90,11 @@ export function createMockDraft(overrides?: Partial<DraftMessage>): DraftMessage
 export function createMockSendRequest(overrides?: Partial<SendMessageRequest>): SendMessageRequest {
   return {
     id: `req-${Date.now()}-${Math.random()}`,
-    message_id: overrides?.message_id || 'msg-1',
+    messageId: overrides?.messageId || 'msg-1',
     status: 'pending',
-    retry_count: 0,
-    created_at: new Date(),
-    last_sent_at: undefined,
+    retryCount: 0,
+    createdAt: new Date(),
+    lastSentAt: undefined,
     ...overrides,
   };
 }

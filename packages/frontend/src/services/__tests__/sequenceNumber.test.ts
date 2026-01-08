@@ -42,9 +42,9 @@ describe('SequenceNumber Service', () => {
       const counter = await db.sequence_counters.get([conversationId, userId]);
 
       expect(counter).toBeDefined();
-      expect(counter?.conversation_id).toBe(conversationId);
-      expect(counter?.user_id).toBe(userId);
-      expect(counter?.next_sequence).toBe(2); // Next one will be 2
+      expect(counter?.conversationId).toBe(conversationId);
+      expect(counter?.userId).toBe(userId);
+      expect(counter?.nextSequence).toBe(2); // Next one will be 2
     });
 
     it('should handle multiple conversations independently', async () => {
@@ -118,16 +118,16 @@ describe('SequenceNumber Service', () => {
       await getNextSequenceNumber(conversationId, userId);
       const counter2 = await db.sequence_counters.get([conversationId, userId]);
 
-      expect(counter2?.updated_at.getTime()).toBeGreaterThan(counter1?.updated_at.getTime() || 0);
+      expect(counter2?.updatedAt.getTime()).toBeGreaterThan(counter1?.updatedAt.getTime() || 0);
     });
 
     it('should handle very large sequence numbers', async () => {
       // Set initial sequence to a large number
       await db.sequence_counters.put({
-        conversation_id: conversationId,
-        user_id: userId,
-        next_sequence: 999999,
-        updated_at: new Date(),
+        conversationId: conversationId,
+        userId: userId,
+        nextSequence: 999999,
+        updatedAt: new Date(),
       });
 
       const seq = await getNextSequenceNumber(conversationId, userId);
@@ -195,8 +195,8 @@ describe('SequenceNumber Service', () => {
       const counter1 = await db.sequence_counters.get(['conv-1', 'user-1']);
       const counter2 = await db.sequence_counters.get(['conv-1', 'user-2']);
 
-      expect(counter1?.next_sequence).toBe(2);
-      expect(counter2?.next_sequence).toBe(2);
+      expect(counter1?.nextSequence).toBe(2);
+      expect(counter2?.nextSequence).toBe(2);
 
       // Verify they are different records
       const allCounters = await db.sequence_counters.toArray();

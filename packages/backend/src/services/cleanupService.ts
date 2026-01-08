@@ -6,6 +6,10 @@ export class CleanupService {
   private scheduledTask: ScheduledTask | null = null;
 
   start() {
+    if (this.scheduledTask) {
+      return;
+    }
+
     // Run cleanup every 6 hours
     this.scheduledTask = cron.schedule('0 */6 * * *', async () => {
       await this.cleanupInactiveDemoUsers();

@@ -31,8 +31,8 @@ describe('DatabaseOperations', () => {
       expect(result.id).toBe(user.id);
       expect(result.name).toBe(user.name);
       expect(result.email).toBe(user.email);
-      expect(result.created_at).toBeInstanceOf(Date);
-      expect(result.updated_at).toBeInstanceOf(Date);
+      expect(result.createdAt).toBeInstanceOf(Date);
+      expect(result.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should update an existing user', async () => {
@@ -43,7 +43,7 @@ describe('DatabaseOperations', () => {
       const result = await dbOps.upsertUser(updatedUser);
 
       expect(result.name).toBe('Updated Name');
-      expect(result.updated_at).toBeInstanceOf(Date);
+      expect(result.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should get user by ID', async () => {
@@ -70,7 +70,7 @@ describe('DatabaseOperations', () => {
 
       expect(result.id).toBe(conversation.id);
       expect(result.name).toBe(conversation.name);
-      expect(result.created_by).toBe(conversation.created_by);
+      expect(result.createdBy).toBe(conversation.createdBy);
     });
 
     it('should update an existing conversation', async () => {
@@ -81,28 +81,28 @@ describe('DatabaseOperations', () => {
       const result = await dbOps.upsertConversation(updatedConversation);
 
       expect(result.name).toBe('Updated Name');
-      expect(result.updated_at).toBeInstanceOf(Date);
+      expect(result.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should get user conversations with participants and last message', async () => {
       const user1 = createMockUser({ name: 'Alice' });
       const user2 = createMockUser({ name: 'Bob' });
-      const conversation = createMockConversation({ created_by: user1.id });
+      const conversation = createMockConversation({ createdBy: user1.id });
       const message = createMockMessage({
-        conversation_id: conversation.id,
-        sender_id: user1.id,
+        conversationId: conversation.id,
+        senderId: user1.id,
       });
 
       await dbOps.upsertUser(user1);
       await dbOps.upsertUser(user2);
       await dbOps.upsertConversation(conversation);
       await dbOps.addConversationParticipant({
-        conversation_id: conversation.id,
-        user_id: user1.id,
+        conversationId: conversation.id,
+        userId: user1.id,
       });
       await dbOps.addConversationParticipant({
-        conversation_id: conversation.id,
-        user_id: user2.id,
+        conversationId: conversation.id,
+        userId: user2.id,
       });
       await dbOps.upsertMessage(message);
 
@@ -111,8 +111,8 @@ describe('DatabaseOperations', () => {
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(conversation.id);
       expect(result[0].participants).toHaveLength(2);
-      expect(result[0].last_message).toBeDefined();
-      expect(result[0].last_message?.id).toBe(message.id);
+      expect(result[0].lastMessage).toBeDefined();
+      expect(result[0].lastMessage?.id).toBe(message.id);
     });
 
     it('should return empty array if user has no conversations', async () => {
@@ -134,8 +134,8 @@ describe('DatabaseOperations', () => {
         expect(result.id).toBe(message.id);
         expect(result.content).toBe(message.content);
         expect(result.status).toBe(message.status);
-        expect(result.created_at).toBeInstanceOf(Date);
-        expect(result.updated_at).toBeInstanceOf(Date);
+        expect(result.createdAt).toBeInstanceOf(Date);
+        expect(result.updatedAt).toBeInstanceOf(Date);
       });
 
       it('should update an existing message', async () => {
@@ -151,14 +151,14 @@ describe('DatabaseOperations', () => {
       it('should preserve created_at when updating', async () => {
         const message = createMockMessage();
         const inserted = await dbOps.upsertMessage(message);
-        const originalCreatedAt = inserted.created_at;
+        const originalCreatedAt = inserted.createdAt;
 
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         const updatedMessage = { ...message, content: 'Updated content' };
         const result = await dbOps.upsertMessage(updatedMessage);
 
-        expect(result.created_at.getTime()).toBe(originalCreatedAt.getTime());
+        expect(result.createdAt.getTime()).toBe(originalCreatedAt.getTime());
       });
     });
 
@@ -193,7 +193,7 @@ describe('DatabaseOperations', () => {
       it('should get messages with pagination limit', async () => {
         const conversationId = 'conv-1';
         const messages = Array.from({ length: 100 }, (_, i) =>
-          createMockMessage({ conversation_id: conversationId, content: `Message ${i}` })
+          createMockMessage({ conversationId: conversationId, content: `Message ${i}` })
         );
 
         for (const msg of messages) {
@@ -207,16 +207,16 @@ describe('DatabaseOperations', () => {
 
       it('should filter by next_cursor', async () => {
         const conversationId = 'conv-1';
-        const msg1 = createMockMessage({ id: 'msg-1', conversation_id: conversationId });
-        const msg2 = createMockMessage({ id: 'msg-2', conversation_id: conversationId });
-        const msg3 = createMockMessage({ id: 'msg-3', conversation_id: conversationId });
+        const msg1 = createMockMessage({ id: 'msg-1', conversationId: conversationId });
+        const msg2 = createMockMessage({ id: 'msg-2', conversationId: conversationId });
+        const msg3 = createMockMessage({ id: 'msg-3', conversationId: conversationId });
 
         await dbOps.upsertMessage(msg1);
         await dbOps.upsertMessage(msg2);
         await dbOps.upsertMessage(msg3);
 
         const result = await dbOps.getConversationMessages(conversationId, {
-          next_cursor: 'msg-3',
+          nextCursor: 'msg-3',
         });
 
         // Should return messages with ID < 'msg-3'
@@ -228,12 +228,12 @@ describe('DatabaseOperations', () => {
         const cutoffDate = new Date('2025-01-01T00:00:00Z');
 
         const oldMsg = createMockMessage({
-          conversation_id: conversationId,
-          created_at: new Date('2024-12-31T23:59:59Z'),
+          conversationId: conversationId,
+          createdAt: new Date('2024-12-31T23:59:59Z'),
         });
         const newMsg = createMockMessage({
-          conversation_id: conversationId,
-          created_at: new Date('2025-01-01T00:00:01Z'),
+          conversationId: conversationId,
+          createdAt: new Date('2025-01-01T00:00:01Z'),
         });
 
         await dbOps.upsertMessage(oldMsg);
@@ -252,19 +252,19 @@ describe('DatabaseOperations', () => {
         const timestamp = new Date('2025-01-01T12:00:00Z');
 
         const msg1 = createMockMessage({
-          conversation_id: conversationId,
-          created_at: timestamp,
-          sequence_number: 2,
+          conversationId: conversationId,
+          createdAt: timestamp,
+          sequenceNumber: 2,
         });
         const msg2 = createMockMessage({
-          conversation_id: conversationId,
-          created_at: timestamp,
-          sequence_number: 1,
+          conversationId: conversationId,
+          createdAt: timestamp,
+          sequenceNumber: 1,
         });
         const msg3 = createMockMessage({
-          conversation_id: conversationId,
-          created_at: new Date('2025-01-01T11:59:00Z'),
-          sequence_number: 3,
+          conversationId: conversationId,
+          createdAt: new Date('2025-01-01T11:59:00Z'),
+          sequenceNumber: 3,
         });
 
         await dbOps.upsertMessage(msg1);
@@ -332,13 +332,13 @@ describe('DatabaseOperations', () => {
         const conversationId = 'conv-1';
         const oldMsg = createMockMessage({
           id: 'msg-old',
-          conversation_id: conversationId,
-          created_at: new Date('2025-01-01T10:00:00Z'),
+          conversationId: conversationId,
+          createdAt: new Date('2025-01-01T10:00:00Z'),
         });
         const newerMsg = createMockMessage({
           id: 'msg-new',
-          conversation_id: conversationId,
-          created_at: new Date('2025-01-01T12:00:00Z'),
+          conversationId: conversationId,
+          createdAt: new Date('2025-01-01T12:00:00Z'),
         });
 
         await dbOps.upsertMessage(oldMsg);
@@ -351,7 +351,7 @@ describe('DatabaseOperations', () => {
 
       it('should return false if no older messages exist', async () => {
         const conversationId = 'conv-1';
-        const msg = createMockMessage({ conversation_id: conversationId });
+        const msg = createMockMessage({ conversationId: conversationId });
 
         await dbOps.upsertMessage(msg);
 
@@ -372,49 +372,49 @@ describe('DatabaseOperations', () => {
     it('should upsert pagination metadata (insert)', async () => {
       const conversationId = 'conv-1';
       const metadata = {
-        has_more: true,
-        next_cursor: 'cursor-123',
-        last_message_id: 'msg-123',
+        hasMore: true,
+        nextCursor: 'cursor-123',
+        lastMessageId: 'msg-123',
       };
 
       const result = await dbOps.upsertPaginationMetadata(conversationId, metadata);
 
-      expect(result.conversation_id).toBe(conversationId);
-      expect(result.has_more).toBe(true);
-      expect(result.next_cursor).toBe('cursor-123');
-      expect(result.updated_at).toBeInstanceOf(Date);
+      expect(result.conversationId).toBe(conversationId);
+      expect(result.hasMore).toBe(true);
+      expect(result.nextCursor).toBe('cursor-123');
+      expect(result.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should upsert pagination metadata (update)', async () => {
       const conversationId = 'conv-1';
       await dbOps.upsertPaginationMetadata(conversationId, {
-        has_more: true,
-        next_cursor: 'cursor-old',
-        last_message_id: 'msg-old',
+        hasMore: true,
+        nextCursor: 'cursor-old',
+        lastMessageId: 'msg-old',
       });
 
       const result = await dbOps.upsertPaginationMetadata(conversationId, {
-        has_more: false,
-        next_cursor: 'cursor-new',
-        last_message_id: 'msg-new',
+        hasMore: false,
+        nextCursor: 'cursor-new',
+        lastMessageId: 'msg-new',
       });
 
-      expect(result.has_more).toBe(false);
-      expect(result.next_cursor).toBe('cursor-new');
+      expect(result.hasMore).toBe(false);
+      expect(result.nextCursor).toBe('cursor-new');
     });
 
     it('should get pagination metadata', async () => {
       const conversationId = 'conv-1';
       await dbOps.upsertPaginationMetadata(conversationId, {
-        has_more: true,
-        next_cursor: 'cursor-123',
-        last_message_id: 'msg-123',
+        hasMore: true,
+        nextCursor: 'cursor-123',
+        lastMessageId: 'msg-123',
       });
 
       const result = await dbOps.getPaginationMetadata(conversationId);
 
       expect(result).toBeDefined();
-      expect(result?.has_more).toBe(true);
+      expect(result?.hasMore).toBe(true);
     });
 
     it('should return undefined for non-existent pagination metadata', async () => {
@@ -426,9 +426,9 @@ describe('DatabaseOperations', () => {
     it('should clear pagination metadata', async () => {
       const conversationId = 'conv-1';
       await dbOps.upsertPaginationMetadata(conversationId, {
-        has_more: true,
-        next_cursor: 'cursor-123',
-        last_message_id: 'msg-123',
+        hasMore: true,
+        nextCursor: 'cursor-123',
+        lastMessageId: 'msg-123',
       });
 
       await dbOps.clearPaginationMetadata(conversationId);
@@ -441,63 +441,63 @@ describe('DatabaseOperations', () => {
   describe('Conversation Participant Operations', () => {
     it('should add conversation participant', async () => {
       const participant = {
-        conversation_id: 'conv-1',
-        user_id: 'user-1',
+        conversationId: 'conv-1',
+        userId: 'user-1',
       };
 
       const result = await dbOps.addConversationParticipant(participant);
 
-      expect(result.conversation_id).toBe(participant.conversation_id);
-      expect(result.user_id).toBe(participant.user_id);
+      expect(result.conversationId).toBe(participant.conversationId);
+      expect(result.userId).toBe(participant.userId);
     });
 
     it('should return existing participant if duplicate', async () => {
       const participant = {
-        conversation_id: 'conv-1',
-        user_id: 'user-1',
+        conversationId: 'conv-1',
+        userId: 'user-1',
       };
 
       await dbOps.addConversationParticipant(participant);
       const result = await dbOps.addConversationParticipant(participant);
 
-      expect(result.conversation_id).toBe(participant.conversation_id);
+      expect(result.conversationId).toBe(participant.conversationId);
     });
   });
 
   describe('Send Message Request Operations', () => {
     it('should create send message request with generated ID', async () => {
-      const request: Omit<SendMessageRequest, 'id' | 'created_at'> = {
-        message_id: 'msg-123',
+      const request: Omit<SendMessageRequest, 'id' | 'createdAt'> = {
+        messageId: 'msg-123',
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       };
 
       const result = await dbOps.createSendMessageRequest(request);
 
       expect(result.id).toContain('msg-123');
       expect(result.status).toBe('pending');
-      expect(result.created_at).toBeInstanceOf(Date);
+      expect(result.createdAt).toBeInstanceOf(Date);
     });
 
     it('should get pending send requests sorted by created_at', async () => {
       const req1 = await dbOps.createSendMessageRequest({
-        message_id: 'msg-1',
+        messageId: 'msg-1',
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       const req2 = await dbOps.createSendMessageRequest({
-        message_id: 'msg-2',
+        messageId: 'msg-2',
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       const result = await dbOps.getPendingSendRequests();
@@ -509,44 +509,44 @@ describe('DatabaseOperations', () => {
 
     it('should update send request status', async () => {
       const req = await dbOps.createSendMessageRequest({
-        message_id: 'msg-1',
+        messageId: 'msg-1',
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       await dbOps.updateSendRequestStatus(req.id, 'in_flight');
 
       const updated = await dbOps.db.send_message_requests.get(req.id);
       expect(updated?.status).toBe('in_flight');
-      expect(updated?.last_sent_at).toBeInstanceOf(Date);
+      expect(updated?.lastSentAt).toBeInstanceOf(Date);
     });
 
     it('should increment retry_count when status is failed', async () => {
       const req = await dbOps.createSendMessageRequest({
-        message_id: 'msg-1',
+        messageId: 'msg-1',
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       await dbOps.updateSendRequestStatus(req.id, 'failed', 'Network error');
 
       const updated = await dbOps.db.send_message_requests.get(req.id);
       expect(updated?.status).toBe('failed');
-      expect(updated?.retry_count).toBe(1);
-      expect(updated?.error_message).toBe('Network error');
+      expect(updated?.retryCount).toBe(1);
+      expect(updated?.errorMessage).toBe('Network error');
     });
 
     it('should delete send request', async () => {
       const req = await dbOps.createSendMessageRequest({
-        message_id: 'msg-1',
+        messageId: 'msg-1',
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       await dbOps.deleteSendRequest(req.id);
@@ -557,34 +557,34 @@ describe('DatabaseOperations', () => {
 
     it('should get send request by message ID', async () => {
       await dbOps.createSendMessageRequest({
-        message_id: 'msg-unique-123',
+        messageId: 'msg-unique-123',
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       const result = await dbOps.getSendRequestByMessageId('msg-unique-123');
 
       expect(result).toBeDefined();
-      expect(result?.message_id).toBe('msg-unique-123');
+      expect(result?.messageId).toBe('msg-unique-123');
     });
 
     it('should get send requests by status', async () => {
       await dbOps.createSendMessageRequest({
-        message_id: 'msg-1',
+        messageId: 'msg-1',
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       await dbOps.createSendMessageRequest({
-        message_id: 'msg-2',
+        messageId: 'msg-2',
         status: 'failed',
-        retry_count: 3,
-        last_sent_at: undefined,
-        error_message: 'Error',
+        retryCount: 3,
+        lastSentAt: undefined,
+        errorMessage: 'Error',
       });
 
       const failedRequests = await dbOps.getSendRequestsByStatus('failed');
@@ -596,9 +596,9 @@ describe('DatabaseOperations', () => {
 
   describe('Draft Message Operations', () => {
     it('should save a new draft message', async () => {
-      const draft: Omit<DraftMessage, 'id' | 'created_at' | 'updated_at'> = {
-        conversation_id: 'conv-1',
-        user_id: 'user-1',
+      const draft: Omit<DraftMessage, 'id' | 'createdAt' | 'updatedAt'> = {
+        conversationId: 'conv-1',
+        userId: 'user-1',
         content: 'Draft content',
       };
 
@@ -606,13 +606,13 @@ describe('DatabaseOperations', () => {
 
       expect(result.id).toContain('draft');
       expect(result.content).toBe('Draft content');
-      expect(result.created_at).toBeInstanceOf(Date);
+      expect(result.createdAt).toBeInstanceOf(Date);
     });
 
     it('should update existing draft message', async () => {
-      const draft: Omit<DraftMessage, 'id' | 'created_at' | 'updated_at'> = {
-        conversation_id: 'conv-1',
-        user_id: 'user-1',
+      const draft: Omit<DraftMessage, 'id' | 'createdAt' | 'updatedAt'> = {
+        conversationId: 'conv-1',
+        userId: 'user-1',
         content: 'Original draft',
       };
 
@@ -625,7 +625,7 @@ describe('DatabaseOperations', () => {
     });
 
     it('should get draft message by conversation and user', async () => {
-      const draft = createMockDraft({ conversation_id: 'conv-1', user_id: 'user-1' });
+      const draft = createMockDraft({ conversationId: 'conv-1', userId: 'user-1' });
       await dbOps.db.draft_messages.add(draft);
 
       const result = await dbOps.getDraftMessage('conv-1', 'user-1');
@@ -635,7 +635,7 @@ describe('DatabaseOperations', () => {
     });
 
     it('should delete draft message', async () => {
-      const draft = createMockDraft({ conversation_id: 'conv-1', user_id: 'user-1' });
+      const draft = createMockDraft({ conversationId: 'conv-1', userId: 'user-1' });
       await dbOps.db.draft_messages.add(draft);
 
       await dbOps.deleteDraftMessage('conv-1', 'user-1');
@@ -653,12 +653,12 @@ describe('DatabaseOperations', () => {
       const oldFailedTemp = createMockMessage({
         tempId: 'temp-old',
         status: 'failed',
-        created_at: oldDate,
+        createdAt: oldDate,
       });
       const recentFailedTemp = createMockMessage({
         tempId: 'temp-recent',
         status: 'failed',
-        created_at: now,
+        createdAt: now,
       });
 
       await dbOps.upsertMessage(oldFailedTemp);
@@ -681,11 +681,11 @@ describe('DatabaseOperations', () => {
 
       // Create send request for active message only
       await dbOps.createSendMessageRequest({
-        message_id: activeMsg.id,
+        messageId: activeMsg.id,
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       const deletedCount = await dbOps.cleanupOrphanedTemporaryMessages();
@@ -722,27 +722,27 @@ describe('DatabaseOperations', () => {
       // Add data to all tables
       const user = createMockUser();
       const conversation = createMockConversation();
-      const message = createMockMessage({ conversation_id: conversation.id });
+      const message = createMockMessage({ conversationId: conversation.id });
       const draft = createMockDraft();
 
       await dbOps.upsertUser(user);
       await dbOps.upsertConversation(conversation);
       await dbOps.upsertMessage(message);
       await dbOps.saveDraftMessage({
-        conversation_id: draft.conversation_id,
-        user_id: draft.user_id,
+        conversationId: draft.conversationId,
+        userId: draft.userId,
         content: draft.content,
       });
       await dbOps.addConversationParticipant({
-        conversation_id: conversation.id,
-        user_id: user.id,
+        conversationId: conversation.id,
+        userId: user.id,
       });
       await dbOps.createSendMessageRequest({
-        message_id: message.id,
+        messageId: message.id,
         status: 'pending',
-        retry_count: 0,
-        last_sent_at: undefined,
-        error_message: undefined,
+        retryCount: 0,
+        lastSentAt: undefined,
+        errorMessage: undefined,
       });
 
       await dbOps.clearAllData();

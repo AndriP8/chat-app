@@ -193,9 +193,9 @@ describe('MessageScheduler', () => {
       const request = await scheduler.queueMessage(message.id);
 
       expect(request).toBeDefined();
-      expect(request.message_id).toBe(message.id);
+      expect(request.messageId).toBe(message.id);
       expect(request.status).toBe('pending');
-      expect(request.retry_count).toBe(0);
+      expect(request.retryCount).toBe(0);
     });
 
     it('should create send request in database', async () => {
@@ -210,7 +210,7 @@ describe('MessageScheduler', () => {
       // Check immediately - request should be in database before processing starts
       const dbRequest = await dbOps.db.send_message_requests.get(request.id);
       expect(dbRequest).toBeDefined();
-      expect(dbRequest?.message_id).toBe(message.id);
+      expect(dbRequest?.messageId).toBe(message.id);
       expect(dbRequest?.status).toBe('pending');
     });
 
@@ -295,7 +295,7 @@ describe('MessageScheduler', () => {
 
       expect(mockSendCallback).toHaveBeenCalledWith(
         expect.objectContaining({
-          message_id: message.id,
+          messageId: message.id,
           status: 'pending',
         })
       );
@@ -438,7 +438,7 @@ describe('MessageScheduler', () => {
 
       const requests = await dbOps.getSendRequestsByStatus('failed');
       expect(requests.length).toBeGreaterThanOrEqual(1);
-      expect(requests[0].retry_count).toBeGreaterThanOrEqual(1);
+      expect(requests[0].retryCount).toBeGreaterThanOrEqual(1);
 
       scheduler.stop();
     });
@@ -458,8 +458,8 @@ describe('MessageScheduler', () => {
       const requests = await dbOps.getSendRequestsByStatus('failed');
       expect(requests).toHaveLength(1);
 
-      // Check that retry_count increased (should be at least 2-3 retries)
-      const retryCount = requests[0].retry_count;
+      // Check that retryCount increased (should be at least 2-3 retries)
+      const retryCount = requests[0].retryCount;
       expect(retryCount).toBeGreaterThanOrEqual(2);
 
       scheduler.stop();
@@ -499,7 +499,7 @@ describe('MessageScheduler', () => {
 
       const requests = await dbOps.getSendRequestsByStatus('failed');
       expect(requests.length).toBeGreaterThanOrEqual(1);
-      expect(requests[0].retry_count).toBeGreaterThanOrEqual(5);
+      expect(requests[0].retryCount).toBeGreaterThanOrEqual(5);
 
       // Message should be marked as failed
       const failedMessage = await dbOps.db.messages.get(message.id);
@@ -525,9 +525,9 @@ describe('MessageScheduler', () => {
       expect(requests.length).toBeGreaterThanOrEqual(1);
 
       // Find the request for our message
-      const ourRequest = requests.find((r) => r.message_id === message.id);
+      const ourRequest = requests.find((r) => r.messageId === message.id);
       expect(ourRequest).toBeDefined();
-      expect(ourRequest?.error_message).toContain(errorMsg);
+      expect(ourRequest?.errorMessage).toContain(errorMsg);
 
       scheduler.stop();
     });
@@ -564,7 +564,7 @@ describe('MessageScheduler', () => {
       // Check that timeout occurred
       // The message should have timed out and failed at least once
       const allRequests = await dbOps.db.send_message_requests.toArray();
-      const ourRequest = allRequests.find((r) => r.message_id === message.id);
+      const ourRequest = allRequests.find((r) => r.messageId === message.id);
 
       // Request should exist with timeout error
       expect(ourRequest).toBeDefined();
@@ -573,12 +573,12 @@ describe('MessageScheduler', () => {
       expect(['failed', 'in_flight']).toContain(ourRequest!.status);
 
       // Error message should mention timeout if it was set
-      if (ourRequest!.error_message) {
-        expect(ourRequest!.error_message).toContain('timeout');
+      if (ourRequest!.errorMessage) {
+        expect(ourRequest!.errorMessage).toContain('timeout');
       }
 
       // Should have attempted at least once
-      expect(ourRequest!.retry_count).toBeGreaterThanOrEqual(0);
+      expect(ourRequest!.retryCount).toBeGreaterThanOrEqual(0);
     });
 
     it('should not timeout if send completes in time', async () => {
@@ -624,19 +624,19 @@ describe('MessageScheduler', () => {
 
       // Create send requests directly in database to avoid triggering processQueue
       const request1 = createMockSendRequest({
-        message_id: messages[0].id,
+        messageId: messages[0].id,
         status: 'pending',
-        retry_count: 0,
+        retryCount: 0,
       });
       const request2 = createMockSendRequest({
-        message_id: messages[1].id,
+        messageId: messages[1].id,
         status: 'pending',
-        retry_count: 0,
+        retryCount: 0,
       });
       const failedRequest = createMockSendRequest({
-        message_id: messages[2].id,
+        messageId: messages[2].id,
         status: 'failed',
-        retry_count: 2,
+        retryCount: 2,
       });
 
       await dbOps.db.send_message_requests.add(request1);
@@ -670,9 +670,9 @@ describe('MessageScheduler', () => {
       for (const msg of messages) {
         await dbOps.upsertMessage(msg);
         const failedRequest = createMockSendRequest({
-          message_id: msg.id,
+          messageId: msg.id,
           status: 'failed',
-          retry_count: 5,
+          retryCount: 5,
         });
         await dbOps.db.send_message_requests.add(failedRequest);
       }
@@ -699,11 +699,11 @@ describe('MessageScheduler', () => {
 
       // Create requests directly in database to avoid triggering processQueue
       const pendingRequest = createMockSendRequest({
-        message_id: messages[0].id,
+        messageId: messages[0].id,
         status: 'pending',
       });
       const inFlightRequest = createMockSendRequest({
-        message_id: messages[1].id,
+        messageId: messages[1].id,
         status: 'in_flight',
       });
 
@@ -793,7 +793,7 @@ describe('MessageScheduler', () => {
 
       const requests = await dbOps.getSendRequestsByStatus('failed');
       expect(requests).toHaveLength(1);
-      expect(requests[0].error_message).toContain('Send message callback not set');
+      expect(requests[0].errorMessage).toContain('Send message callback not set');
 
       schedulerWithoutCallback.stop();
     });
@@ -828,8 +828,8 @@ describe('MessageScheduler', () => {
 
       // Set up mocks: first message fails, second succeeds
       errorMockCallback.mockImplementation(async (req) => {
-        callCounts.set(req.message_id, (callCounts.get(req.message_id) || 0) + 1);
-        if (req.message_id === 'error-msg-1') {
+        callCounts.set(req.messageId, (callCounts.get(req.messageId) || 0) + 1);
+        if (req.messageId === 'error-msg-1') {
           throw new Error('Network error');
         }
         return messages[1];
@@ -851,13 +851,13 @@ describe('MessageScheduler', () => {
 
       // Check that both message IDs were attempted
       // biome-ignore lint/suspicious/noExplicitAny: Mock call arguments typing
-      const attemptedIds = errorMockCallback.mock.calls.map((call: any[]) => call[0].message_id);
+      const attemptedIds = errorMockCallback.mock.calls.map((call: any[]) => call[0].messageId);
       expect(attemptedIds).toContain('error-msg-1');
       expect(attemptedIds).toContain('error-msg-2');
 
       const failed = await dbOps.getSendRequestsByStatus('failed');
       expect(failed.length).toBeGreaterThanOrEqual(1);
-      const failedMsg = failed.find((r) => r.message_id === 'error-msg-1');
+      const failedMsg = failed.find((r) => r.messageId === 'error-msg-1');
       expect(failedMsg).toBeDefined();
 
       await delay(50);
@@ -910,11 +910,11 @@ describe('MessageScheduler', () => {
 
       // Set up mock to return the correct message for each call
       rapidMockCallback.mockImplementation(async (req) => {
-        const msg = messages.find((m) => m.id === req.message_id);
+        const msg = messages.find((m) => m.id === req.messageId);
         if (!msg) {
-          throw new Error(`Message not found: ${req.message_id}`);
+          throw new Error(`Message not found: ${req.messageId}`);
         }
-        processedIds.add(req.message_id);
+        processedIds.add(req.messageId);
         return msg;
       });
 
@@ -956,9 +956,9 @@ describe('MessageScheduler', () => {
 
       // Create a failed request that has exceeded max retries
       const exhaustedRequest = createMockSendRequest({
-        message_id: message.id,
+        messageId: message.id,
         status: 'failed',
-        retry_count: 10, // More than maxRetries
+        retryCount: 10, // More than maxRetries
       });
       await dbOps.db.send_message_requests.add(exhaustedRequest);
 

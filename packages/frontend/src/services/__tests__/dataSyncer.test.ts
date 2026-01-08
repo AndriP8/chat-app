@@ -115,7 +115,7 @@ describe('DataSyncer', () => {
 
     it('should handle incoming message from other user', async () => {
       const user = createMockUser();
-      const message = createMockMessage({ sender_id: user.id });
+      const message = createMockMessage({ senderId: user.id });
 
       await dbOps.upsertUser(user);
 
@@ -137,8 +137,8 @@ describe('DataSyncer', () => {
     it('should replace temporary message when tempId is present', async () => {
       const user = createMockUser({ id: 'user-1' });
       const tempId = 'temp-123';
-      const tempMessage = createMockMessage({ id: tempId, tempId, sender_id: user.id });
-      const serverMessage = createMockMessage({ id: 'server-456', tempId, sender_id: user.id });
+      const tempMessage = createMockMessage({ id: tempId, tempId, senderId: user.id });
+      const serverMessage = createMockMessage({ id: 'server-456', tempId, senderId: user.id });
 
       await dbOps.upsertUser(user);
       await dbOps.upsertMessage(tempMessage);
@@ -166,7 +166,7 @@ describe('DataSyncer', () => {
       const otherUser = createMockUser({ id: 'other-user' });
       await dbOps.upsertUser(otherUser);
 
-      const message = createMockMessage({ sender_id: otherUser.id });
+      const message = createMockMessage({ senderId: otherUser.id });
 
       const setEventHandlersCall = vi.mocked(mockWebSocketService.setEventHandlers).mock.calls[0];
       const handlers = setEventHandlersCall[0];
@@ -179,13 +179,13 @@ describe('DataSyncer', () => {
       // Verify message was stored
       const stored = await dbOps.getMessageById(message.id);
       expect(stored).toBeDefined();
-      expect(stored?.sender_id).toBe(otherUser.id);
+      expect(stored?.senderId).toBe(otherUser.id);
     });
 
     it('should not mark own messages as delivered', async () => {
       const ownUser = createMockUser({ id: 'user-1' });
       const tempId = 'temp-own';
-      const message = createMockMessage({ sender_id: ownUser.id, tempId });
+      const message = createMockMessage({ senderId: ownUser.id, tempId });
 
       await dbOps.upsertUser(ownUser);
       await dbOps.upsertMessage({ ...message, id: tempId, tempId });
@@ -203,7 +203,7 @@ describe('DataSyncer', () => {
     it('should broadcast received messages to other tabs', async () => {
       const { broadcastChannelService } = await import('../broadcastChannel');
       const user = createMockUser();
-      const message = createMockMessage({ sender_id: user.id });
+      const message = createMockMessage({ senderId: user.id });
 
       await dbOps.upsertUser(user);
 
@@ -221,7 +221,7 @@ describe('DataSyncer', () => {
     it('should fallback to upsert if replace temporary message fails', async () => {
       const user = createMockUser();
       const tempId = 'temp-fail';
-      const message = createMockMessage({ id: 'server-id', tempId, sender_id: user.id });
+      const message = createMockMessage({ id: 'server-id', tempId, senderId: user.id });
 
       await dbOps.upsertUser(user);
 
@@ -357,14 +357,14 @@ describe('DataSyncer', () => {
 
     it('should load from local IndexedDB first', async () => {
       const user = createMockUser({ id: 'user-1' });
-      const conversation = createMockConversation({ created_by: user.id });
-      const message = createMockMessage({ conversation_id: conversation.id, sender_id: user.id });
+      const conversation = createMockConversation({ createdBy: user.id });
+      const message = createMockMessage({ conversationId: conversation.id, senderId: user.id });
 
       await dbOps.upsertUser(user);
       await dbOps.upsertConversation(conversation);
       await dbOps.addConversationParticipant({
-        conversation_id: conversation.id,
-        user_id: user.id,
+        conversationId: conversation.id,
+        userId: user.id,
       });
       await dbOps.upsertMessage(message);
 
@@ -380,11 +380,11 @@ describe('DataSyncer', () => {
         {
           id: 'conv-api',
           name: 'API Conversation',
-          created_by: 'user-1',
+          createdBy: 'user-1',
           participants: [createMockUser({ id: 'user-1' })],
-          last_message: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          lastMessage: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
       ];
 
@@ -406,11 +406,11 @@ describe('DataSyncer', () => {
         {
           id: 'conv-api',
           name: 'API Conversation',
-          created_by: user.id,
+          createdBy: user.id,
           participants: [user],
-          last_message: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          lastMessage: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         },
       ];
 
@@ -445,8 +445,8 @@ describe('DataSyncer', () => {
     it('should load from IndexedDB if hasCompleteConversation', async () => {
       const user = createMockUser({ id: 'user-1' });
       const conversation = createMockConversation();
-      const msg1 = createMockMessage({ conversation_id: conversation.id, sender_id: user.id });
-      const msg2 = createMockMessage({ conversation_id: conversation.id, sender_id: user.id });
+      const msg1 = createMockMessage({ conversationId: conversation.id, senderId: user.id });
+      const msg2 = createMockMessage({ conversationId: conversation.id, senderId: user.id });
 
       await dbOps.upsertUser(user);
       await dbOps.upsertConversation(conversation);
@@ -461,7 +461,7 @@ describe('DataSyncer', () => {
     it('should fallback to API if incomplete data', async () => {
       const conversationApi = await import('../api/conversations');
       const user = createMockUser({ id: 'user-1' });
-      const message = createMockMessage({ sender_id: user.id });
+      const message = createMockMessage({ senderId: user.id });
 
       vi.mocked(conversationApi.default.getMessages).mockResolvedValue({
         messages: [
@@ -469,10 +469,10 @@ describe('DataSyncer', () => {
             id: message.id,
             content: message.content,
             status: message.status,
-            sender_id: message.sender_id,
-            conversation_id: message.conversation_id,
-            created_at: message.created_at,
-            updated_at: message.updated_at,
+            senderId: message.senderId,
+            conversationId: message.conversationId,
+            createdAt: message.createdAt,
+            updatedAt: message.updatedAt,
             sender: user,
           },
         ],
@@ -488,7 +488,7 @@ describe('DataSyncer', () => {
     it('should store messages and pagination metadata', async () => {
       const conversationApi = await import('../api/conversations');
       const user = createMockUser({ id: 'user-1' });
-      const message = createMockMessage({ sender_id: user.id, conversation_id: 'conv-1' });
+      const message = createMockMessage({ senderId: user.id, conversationId: 'conv-1' });
 
       vi.mocked(conversationApi.default.getMessages).mockResolvedValue({
         messages: [
@@ -496,10 +496,10 @@ describe('DataSyncer', () => {
             id: message.id,
             content: message.content,
             status: message.status,
-            sender_id: message.sender_id,
-            conversation_id: message.conversation_id,
-            created_at: message.created_at,
-            updated_at: message.updated_at,
+            senderId: message.senderId,
+            conversationId: message.conversationId,
+            createdAt: message.createdAt,
+            updatedAt: message.updatedAt,
             sender: user,
           },
         ],
@@ -513,7 +513,7 @@ describe('DataSyncer', () => {
       const metadata = await dbOps.getPaginationMetadata('conv-1');
 
       expect(stored).toBeDefined();
-      expect(metadata?.has_more).toBe(true);
+      expect(metadata?.hasMore).toBe(true);
     });
 
     it('should handle API errors', async () => {
@@ -536,7 +536,7 @@ describe('DataSyncer', () => {
       const user = createMockUser({ id: 'user-1' });
       const conversation = createMockConversation();
       const messages = Array.from({ length: 60 }, (_, i) =>
-        createMockMessage({ id: `msg-${i}`, conversation_id: conversation.id, sender_id: user.id })
+        createMockMessage({ id: `msg-${i}`, conversationId: conversation.id, senderId: user.id })
       );
 
       await dbOps.upsertUser(user);
@@ -547,9 +547,9 @@ describe('DataSyncer', () => {
       }
 
       await dbOps.upsertPaginationMetadata(conversation.id, {
-        has_more: true,
-        next_cursor: 'cursor-old',
-        last_message_id: 'msg-0',
+        hasMore: true,
+        nextCursor: 'cursor-old',
+        lastMessageId: 'msg-0',
       });
 
       const result = await dataSyncer.loadMoreMessages(conversation.id, 'msg-59', 50);
@@ -560,7 +560,7 @@ describe('DataSyncer', () => {
     it('should fetch from server if local cache incomplete', async () => {
       const conversationApi = await import('../api/conversations');
       const user = createMockUser({ id: 'user-1' });
-      const message = createMockMessage({ sender_id: user.id });
+      const message = createMockMessage({ senderId: user.id });
 
       vi.mocked(conversationApi.default.getMessages).mockResolvedValue({
         messages: [
@@ -568,10 +568,10 @@ describe('DataSyncer', () => {
             id: message.id,
             content: message.content,
             status: message.status,
-            sender_id: message.sender_id,
-            conversation_id: message.conversation_id,
-            created_at: message.created_at,
-            updated_at: message.updated_at,
+            senderId: message.senderId,
+            conversationId: message.conversationId,
+            createdAt: message.createdAt,
+            updatedAt: message.updatedAt,
             sender: user,
           },
         ],
@@ -604,7 +604,7 @@ describe('DataSyncer', () => {
       const conversationApi = await import('../api/conversations');
       const user = createMockUser({ id: 'user-1' });
       const conversation = createMockConversation();
-      const msg = createMockMessage({ conversation_id: conversation.id, sender_id: user.id });
+      const msg = createMockMessage({ conversationId: conversation.id, senderId: user.id });
 
       await dbOps.upsertUser(user);
       await dbOps.upsertConversation(conversation);
