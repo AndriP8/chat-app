@@ -120,7 +120,7 @@ export const HomePage = () => {
             </button>
 
             <a
-              href={`https://github.com/${import.meta.env.GITHUB_USERNAME}/chat-app`}
+              href={`https://github.com/${import.meta.env.VITE_GITHUB_USERNAME}/chat-app`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-8 py-4 font-semibold text-gray-700 text-lg shadow-md transition-all hover:border-gray-400 hover:shadow-lg dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-500"
