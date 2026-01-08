@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import { envConfig } from '@/config/env';
 import { conversationParticipants, conversations, db, type User, users } from '@/db';
 import { loginSchema, type UserResponse } from '@/schemas/auth';
+import { transformUserToResponse } from '@/utils/transformers';
 
 // JWT utilities
 const JWT_SECRET = envConfig.JWT_SECRET;
@@ -39,15 +40,7 @@ function verifyToken(token: string): JWTPayload {
 }
 
 function formatUserResponse(user: User): UserResponse {
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    profile_picture_url: user.profile_picture_url,
-    is_demo: user.is_demo,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-  };
+  return transformUserToResponse(user);
 }
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {

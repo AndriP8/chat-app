@@ -4,7 +4,7 @@ export const messageStatusEnum = z.enum(['sending', 'sent', 'delivered', 'read',
 
 export const getMessagesSchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
-  next_cursor: z.string().uuid().optional(),
+  nextCursor: z.string().uuid().optional(),
 });
 
 export const sendMessageSchema = z.object({
@@ -19,32 +19,32 @@ export const userResponseSchema = z.object({
   id: z.string(),
   email: z.string(),
   name: z.string(),
-  profile_picture_url: z.string().nullable(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  profilePictureUrl: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const messageResponseSchema = z.object({
   id: z.string(),
   content: z.string(),
   status: messageStatusEnum,
-  sender_id: z.string(),
-  conversation_id: z.string(),
-  created_at: z.date(),
-  updated_at: z.date(),
-  sender: userResponseSchema.omit({ created_at: true, updated_at: true }),
+  senderId: z.string(),
+  conversationId: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  sender: userResponseSchema.omit({ createdAt: true, updatedAt: true }),
   tempId: z.string().optional(),
-  sequence_number: z.number().int().positive().optional(),
+  sequenceNumber: z.number().int().positive().optional(),
 });
 
 export const conversationResponseSchema = z.object({
   id: z.string(),
   name: z.string().nullable(),
-  created_by: z.string(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  createdBy: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
   participants: z.array(userResponseSchema),
-  last_message: messageResponseSchema.nullable(),
+  lastMessage: messageResponseSchema.nullable(),
 });
 
 export type GetMessagesQuery = z.infer<typeof getMessagesSchema>;

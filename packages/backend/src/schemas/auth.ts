@@ -14,10 +14,10 @@ export const userResponseSchema = z.object({
   id: z.string(),
   email: z.string(),
   name: z.string(),
-  profile_picture_url: z.string().nullable(),
-  is_demo: z.boolean().optional(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  profilePictureUrl: z.string().nullable(),
+  isDemo: z.boolean().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 // Auth response schema

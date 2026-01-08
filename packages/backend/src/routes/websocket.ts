@@ -13,6 +13,7 @@ import {
 } from '@/db';
 import { type MessageResponse, sendMessageSchema } from '@/schemas/conversation';
 import { messageOrderingService } from '@/services/messageOrderingService';
+import { transformMessageToResponse } from '@/utils/transformers';
 
 interface JWTPayload {
   user_id: string;
@@ -299,23 +300,20 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
             conversationId
           );
 
-          const messageResponse: MessageResponse = {
-            id: messageToDeliver.id,
-            content: messageToDeliver.content,
-            status: messageToDeliver.status as 'sending' | 'sent' | 'delivered' | 'read' | 'failed',
-            sender_id: messageToDeliver.sender_id,
-            conversation_id: messageToDeliver.conversation_id,
-            created_at: messageToDeliver.created_at,
-            updated_at: messageToDeliver.updated_at,
+          const messageResponse = transformMessageToResponse({
+            ...messageToDeliver,
             sender: {
               id: user.id,
               email: user.email,
               name: user.name,
               profile_picture_url: user.profile_picture_url ?? null,
+              password_hash: '',
+              is_demo: false,
+              created_at: new Date(),
+              updated_at: new Date(),
             },
-            tempId: messageTempId,
-            sequence_number: messageToDeliver.sequence_number ?? undefined,
-          };
+            temp_id: messageTempId ?? undefined,
+          });
 
           await connectionManager.broadcastToConversation(conversationId, {
             type: 'message',

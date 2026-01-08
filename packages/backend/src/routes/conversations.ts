@@ -10,6 +10,7 @@ import {
   type MessageStatusEnum,
   type UserResponse,
 } from '@/schemas/conversation';
+import { transformMessageToResponse, transformUserToResponse } from '@/utils/transformers';
 
 type UserDbResult = {
   id: string;
@@ -32,28 +33,22 @@ type MessageDbResult = {
 };
 
 function formatUserResponse(user: UserDbResult): UserResponse {
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    profile_picture_url: user.profile_picture_url,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-  };
+  return transformUserToResponse({
+    ...user,
+    password_hash: '',
+    is_demo: false,
+  });
 }
 
-function formatMessageResponse(message: MessageDbResult, sender: UserDbResult): MessageResponse {
-  return {
-    id: message.id,
-    content: message.content,
-    status: message.status,
-    sender_id: message.sender_id,
-    sequence_number: message.sequence_number ?? undefined,
-    conversation_id: message.conversation_id,
-    created_at: message.created_at,
-    updated_at: message.updated_at,
-    sender: formatUserResponse(sender),
-  };
+function formatMessageResponse(message: MessageDbResult, sender: UserDbResult) {
+  return transformMessageToResponse({
+    ...message,
+    sender: {
+      ...sender,
+      password_hash: '',
+      is_demo: false,
+    },
+  }) as Required<MessageResponse>;
 }
 
 export async function conversationRoutes(fastify: FastifyInstance): Promise<void> {
@@ -134,11 +129,11 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
         conversationsWithDetails.push({
           id: conversation.id,
           name: conversation.name,
-          created_by: conversation.created_by,
-          created_at: conversation.created_at,
-          updated_at: conversation.updated_at,
+          createdBy: conversation.created_by,
+          createdAt: conversation.created_at,
+          updatedAt: conversation.updated_at,
           participants: participants.map(formatUserResponse),
-          last_message: lastMessageData
+          lastMessage: lastMessageData
             ? formatMessageResponse(
                 lastMessageData.message as MessageDbResult,
                 lastMessageData.sender
@@ -176,7 +171,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           });
         }
 
-        const { limit, next_cursor } = data as GetMessagesQuery;
+        const { limit, nextCursor } = data as GetMessagesQuery;
 
         const [participation] = await db
           .select()
@@ -197,8 +192,8 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
         }
 
         const baseCondition = eq(messages.conversation_id, conversationId);
-        const whereConditions = next_cursor
-          ? and(baseCondition, lt(messages.id, next_cursor))
+        const whereConditions = nextCursor
+          ? and(baseCondition, lt(messages.id, nextCursor))
           : baseCondition;
 
         const messagesData = await db
@@ -235,7 +230,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           formatMessageResponse(item.message as MessageDbResult, item.sender)
         );
 
-        const nextCursor =
+        const nextCursorValue =
           hasMore && messagesToReturn.length > 0
             ? messagesToReturn[messagesToReturn.length - 1]?.message.id
             : null;
@@ -244,7 +239,7 @@ export async function conversationRoutes(fastify: FastifyInstance): Promise<void
           success: true,
           data: formattedMessages.reverse(),
           hasMore,
-          next_cursor: nextCursor,
+          nextCursor: nextCursorValue,
         });
       } catch (error) {
         console.error('Get messages error:', error);
