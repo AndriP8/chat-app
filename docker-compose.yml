@@ -51,6 +51,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001}
         VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3001}
+        VITE_GITHUB_USERNAME: ${VITE_GITHUB_USERNAME}
     container_name: chat-app-frontend
     restart: unless-stopped
     depends_on:

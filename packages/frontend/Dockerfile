@@ -20,10 +20,12 @@ COPY packages/frontend ./packages/frontend
 # Build arguments for environment variables
 ARG VITE_API_BASE_URL
 ARG VITE_WS_URL
+ARG VITE_GITHUB_USERNAME
 
 # Set environment variables for Vite build
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ENV VITE_WS_URL=${VITE_WS_URL}
+ENV VITE_GITHUB_USERNAME=${VITE_GITHUB_USERNAME}
 
 # Build frontend with environment variables
 RUN cd packages/frontend && pnpm build
