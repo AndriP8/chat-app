@@ -46,19 +46,29 @@ export default function ChatPage() {
   );
   const currentMessages = currentRoom ? messages[currentRoom.id] || [] : [];
 
+  const handleBackToList = useCallback(() => {
+    setCurrentRoom(null);
+  }, []);
+
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar */}
-      <ChatSidebar
-        rooms={conversations}
-        currentRoom={currentRoom}
-        onRoomSelect={handleRoomSelect}
-        isLoading={loading.conversations}
-        messages={messages}
-      />
+      {/* Sidebar - Full width on mobile when no chat selected, hidden on mobile when chat selected */}
+      <div
+        className={`h-full w-full flex-shrink-0 md:w-80 ${
+          currentRoom ? 'hidden md:block' : 'block'
+        }`}
+      >
+        <ChatSidebar
+          rooms={conversations}
+          currentRoom={currentRoom}
+          onRoomSelect={handleRoomSelect}
+          isLoading={loading.conversations}
+          messages={messages}
+        />
+      </div>
 
-      {/* Main Chat Area */}
-      <div className="flex flex-1 flex-col">
+      {/* Main Chat Area - Hidden on mobile when no chat selected, shown when chat selected */}
+      <div className={`flex flex-1 flex-col ${currentRoom ? 'flex' : 'hidden md:flex'}`}>
         {/* Offline Indicator */}
         <OfflineIndicator />
         {/* Message Error Display */}
@@ -71,7 +81,7 @@ export default function ChatPage() {
         {currentRoom ? (
           <>
             {/* Chat Header */}
-            <ChatHeader room={currentRoom} />
+            <ChatHeader room={currentRoom} onBackToList={handleBackToList} />
             {/* Messages */}
             <MessageList
               ref={messageListRef}

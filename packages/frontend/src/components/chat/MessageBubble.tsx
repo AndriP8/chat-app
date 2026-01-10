@@ -64,7 +64,9 @@ export const MessageBubble = ({ message, isOwn, showAvatar = true }: MessageBubb
       )}
 
       {/* Message Content */}
-      <div className={`flex max-w-xs flex-col lg:max-w-md ${isOwn ? 'items-end' : 'items-start'}`}>
+      <div
+        className={`flex max-w-[85%] flex-col sm:max-w-xs lg:max-w-md ${isOwn ? 'items-end' : 'items-start'}`}
+      >
         {/* Message bubble */}
         <div
           className={`wrap-anywhere rounded-2xl px-4 py-2 ${

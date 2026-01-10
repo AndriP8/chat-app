@@ -1,11 +1,13 @@
+import { ArrowLeft } from 'lucide-react';
 import type { ChatRoom } from '@/types/chat';
 import { useAuth } from '../auth/AuthContext';
 
 interface ChatHeaderProps {
   room: ChatRoom;
+  onBackToList?: () => void;
 }
 
-export const ChatHeader = ({ room }: ChatHeaderProps) => {
+export const ChatHeader = ({ room, onBackToList }: ChatHeaderProps) => {
   const { currentUser } = useAuth();
   const recipientParticipant = room.participants.find(
     (participant) => participant.id !== currentUser?.id
@@ -15,8 +17,19 @@ export const ChatHeader = ({ room }: ChatHeaderProps) => {
 
   return (
     <div className="flex items-center justify-between border-gray-200 border-b bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      {/* Left side - Avatar and info */}
+      {/* Left side - Back button (mobile), Avatar and info */}
       <div className="flex items-center gap-3">
+        {/* Back button - visible only on mobile */}
+        {onBackToList && (
+          <button
+            type="button"
+            onClick={onBackToList}
+            className="shrink-0 rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 md:hidden dark:text-gray-300 dark:hover:bg-gray-700"
+            aria-label="Back to conversations"
+          >
+            <ArrowLeft size={20} />
+          </button>
+        )}
         {/* Avatar */}
         <div className="relative shrink-0">
           <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
