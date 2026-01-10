@@ -98,9 +98,7 @@ export class DatabaseOperations {
   async getUserConversations(
     userId: string
   ): Promise<
-    Array<
-      Conversation & { participants: User[]; lastMessage: (Message & { sender: User }) | null }
-    >
+    Array<Conversation & { participants: User[]; lastMessage: (Message & { sender: User }) | null }>
   > {
     try {
       const conversationUser: ConversationParticipant | undefined =

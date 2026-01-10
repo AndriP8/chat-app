@@ -58,7 +58,7 @@ export const ChatSidebar = ({
   }, [roomsWithLatestMessages]);
 
   return (
-    <div className="flex h-full w-80 flex-col border-gray-200 border-r bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div className="flex h-full w-full flex-col border-gray-200 border-r bg-white dark:border-gray-700 dark:bg-gray-800">
       {/* Header */}
       <div className="border-gray-200 border-b p-4 dark:border-gray-700">
         <div className="mb-4 flex items-center justify-between">

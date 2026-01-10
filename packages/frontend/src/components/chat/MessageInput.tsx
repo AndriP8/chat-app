@@ -86,8 +86,8 @@ export const MessageInput = ({
   };
 
   return (
-    <div className="sticky bottom-0 border-gray-200 border-t bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      <form onSubmit={handleSubmit} className="flex items-center gap-3">
+    <div className="sticky bottom-0 border-gray-200 border-t bg-white p-2 sm:p-3 md:p-4 dark:border-gray-700 dark:bg-gray-800">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 sm:gap-3">
         {/* Message input */}
         <textarea
           id="message_content"
