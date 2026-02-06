@@ -30,7 +30,8 @@ export class DataSyncer {
    */
   async initialize(webSocketService: WebSocketService, currentUserId?: string): Promise<void> {
     if (this.isInitialized) {
-      throw new Error('DataSyncer is already initialized');
+      console.warn('DataSyncer is already initialized');
+      return;
     }
 
     this.webSocketService = webSocketService;
