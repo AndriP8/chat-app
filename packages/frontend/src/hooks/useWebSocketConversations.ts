@@ -39,6 +39,26 @@ export function useWebSocketConversations(): UseConversationsReturn {
   const processedMessagesRef = useRef<Set<string>>(new Set());
   const processedStatusUpdatesRef = useRef<Set<string>>(new Set());
 
+  // Cleanup refs periodically to prevent memory leaks
+  useEffect(() => {
+    const MAX_TRACKED_ITEMS = 10000;
+    const CLEANUP_INTERVAL = 60000;
+
+    const cleanupInterval = setInterval(() => {
+      if (processedMessagesRef.current.size > MAX_TRACKED_ITEMS) {
+        const entries = Array.from(processedMessagesRef.current);
+        processedMessagesRef.current = new Set(entries.slice(Math.floor(entries.length / 2)));
+      }
+
+      if (processedStatusUpdatesRef.current.size > MAX_TRACKED_ITEMS) {
+        const entries = Array.from(processedStatusUpdatesRef.current);
+        processedStatusUpdatesRef.current = new Set(entries.slice(Math.floor(entries.length / 2)));
+      }
+    }, CLEANUP_INTERVAL);
+
+    return () => clearInterval(cleanupInterval);
+  }, []);
+
   const { conversations, messages, loading, errors, pagination } = state;
   const messagesRef = useRef(messages);
 
