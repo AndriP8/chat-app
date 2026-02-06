@@ -11,7 +11,7 @@ import {
   type NewMessage,
   users,
 } from '@/db';
-import { type MessageResponse, sendMessageSchema } from '@/schemas/conversation';
+import { sendMessageSchema } from '@/schemas/conversation';
 import { messageOrderingService } from '@/services/messageOrderingService';
 import { transformMessageToResponse } from '@/utils/transformers';
 
@@ -42,6 +42,10 @@ interface MessageStatusData {
   conversationId: string;
 }
 
+interface TypingData {
+  conversationId: string;
+}
+
 type WebSocketMessage =
   | {
       type: 'send_message';
@@ -54,6 +58,10 @@ type WebSocketMessage =
   | {
       type: 'message_delivered' | 'message_read';
       data: MessageStatusData;
+    }
+  | {
+      type: 'typing_start' | 'typing_stop';
+      data: TypingData;
     };
 
 interface WebSocketConnection {
@@ -68,6 +76,7 @@ class ConnectionManager {
     string,
     { messageId: string; conversationId: string; timestamp: number }
   >();
+  private typingUsers = new Map<string, Set<string>>();
   private readonly TEMP_ID_TTL = 30000; // 30 seconds TTL for tempId mappings
 
   addConnection(connection: WebSocketConnection): void {
@@ -165,6 +174,27 @@ class ConnectionManager {
     } catch (error) {
       console.error('Error broadcasting to conversation:', error);
     }
+  }
+
+  setUserTyping(conversationId: string, userId: string): void {
+    if (!this.typingUsers.has(conversationId)) {
+      this.typingUsers.set(conversationId, new Set());
+    }
+    this.typingUsers.get(conversationId)!.add(userId);
+  }
+
+  setUserStoppedTyping(conversationId: string, userId: string): void {
+    const typingSet = this.typingUsers.get(conversationId);
+    if (typingSet) {
+      typingSet.delete(userId);
+      if (typingSet.size === 0) {
+        this.typingUsers.delete(conversationId);
+      }
+    }
+  }
+
+  getTypingUsers(conversationId: string): Set<string> {
+    return this.typingUsers.get(conversationId) || new Set();
   }
 }
 
@@ -491,6 +521,76 @@ async function handleWebSocketMessage(connection: WebSocketConnection, message: 
             data: { message: 'Failed to update message status' },
           })
         );
+      }
+      break;
+    }
+
+    case 'typing_start': {
+      const data = message.data;
+      if (!data.conversationId || typeof data.conversationId !== 'string') {
+        socket.send(
+          JSON.stringify({
+            type: 'error',
+            data: { message: 'Invalid conversation ID' },
+          })
+        );
+        return;
+      }
+
+      try {
+        const isParticipant = await isUserInConversation(user.id, data.conversationId);
+        if (!isParticipant) {
+          socket.send(
+            JSON.stringify({
+              type: 'error',
+              data: { message: 'Not authorized to send typing status' },
+            })
+          );
+          return;
+        }
+
+        connectionManager.setUserTyping(data.conversationId, user.id);
+
+        await connectionManager.broadcastToConversation(data.conversationId, {
+          type: 'user_typing',
+          data: {
+            conversationId: data.conversationId,
+            userId: user.id,
+            userName: user.name,
+            isTyping: true,
+          },
+        });
+      } catch (error) {
+        console.error('Typing start error:', error);
+      }
+      break;
+    }
+
+    case 'typing_stop': {
+      const data = message.data;
+      if (!data.conversationId || typeof data.conversationId !== 'string') {
+        return;
+      }
+
+      try {
+        const isParticipant = await isUserInConversation(user.id, data.conversationId);
+        if (!isParticipant) {
+          return;
+        }
+
+        connectionManager.setUserStoppedTyping(data.conversationId, user.id);
+
+        await connectionManager.broadcastToConversation(data.conversationId, {
+          type: 'user_typing',
+          data: {
+            conversationId: data.conversationId,
+            userId: user.id,
+            userName: user.name,
+            isTyping: false,
+          },
+        });
+      } catch (error) {
+        console.error('Typing stop error:', error);
       }
       break;
     }
