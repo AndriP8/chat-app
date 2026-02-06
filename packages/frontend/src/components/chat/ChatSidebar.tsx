@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { ChatRoom, UIMessage } from '@/types/chat';
+import type { User } from '@/types/database';
 import { ChatRoomItem } from './ChatRoomItem';
 
 interface ChatSidebarProps {
@@ -8,6 +9,7 @@ interface ChatSidebarProps {
   onRoomSelect: (room: ChatRoom) => void;
   isLoading: boolean;
   messages: Record<string, UIMessage[]>;
+  typingUsers?: Record<string, User[]>;
 }
 
 export const ChatSidebar = ({
@@ -16,6 +18,7 @@ export const ChatSidebar = ({
   onRoomSelect,
   isLoading,
   messages,
+  typingUsers = {},
 }: ChatSidebarProps) => {
   const roomsWithLatestMessages = useMemo(() => {
     return rooms.map((room) => {
@@ -84,6 +87,7 @@ export const ChatSidebar = ({
                 room={room}
                 isSelected={currentRoom?.id === room.id}
                 onClick={() => onRoomSelect(room)}
+                typingUsers={typingUsers[room.id] || []}
               />
             ))}
           </div>

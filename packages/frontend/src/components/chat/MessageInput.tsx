@@ -1,6 +1,7 @@
 import { SendHorizonal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { draftMessageService } from '@/services/draftMessageService';
+import { webSocketService } from '@/services/websocket';
 import { useAuth } from '../auth/AuthContext';
 
 interface MessageInputProps {
@@ -15,7 +16,9 @@ export const MessageInput = ({
   conversationId,
 }: MessageInputProps) => {
   const [message, setMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -43,6 +46,12 @@ export const MessageInput = ({
     if (trimmedMessage && conversationId && currentUser?.id) {
       onSendMessage(trimmedMessage);
 
+      // Stop typing indicator
+      if (conversationId && isTyping) {
+        webSocketService.sendTypingStop(conversationId);
+        setIsTyping(false);
+      }
+
       try {
         await draftMessageService.deleteDraft(conversationId, currentUser.id);
       } catch (error) {
@@ -67,7 +76,34 @@ export const MessageInput = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
+    const previousValue = message;
     setMessage(newValue);
+
+    // Handle typing indicator
+    if (conversationId) {
+      // Start typing if transitioning from empty to non-empty
+      if (newValue.trim() && !previousValue.trim() && !isTyping) {
+        webSocketService.sendTypingStart(conversationId);
+        setIsTyping(true);
+      }
+
+      // Stop typing if input becomes empty
+      if (!newValue.trim() && isTyping) {
+        webSocketService.sendTypingStop(conversationId);
+        setIsTyping(false);
+      }
+
+      // Auto-stop typing after 3 seconds of inactivity
+      if (newValue.trim() && isTyping) {
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+          webSocketService.sendTypingStop(conversationId);
+          setIsTyping(false);
+        }, 3000);
+      }
+    }
 
     // Save draft with debouncing
     if (conversationId && currentUser?.id) {
@@ -76,6 +112,12 @@ export const MessageInput = ({
   };
 
   const handleBlur = async () => {
+    // Stop typing indicator on blur
+    if (conversationId && isTyping) {
+      webSocketService.sendTypingStop(conversationId);
+      setIsTyping(false);
+    }
+
     if (conversationId && currentUser?.id) {
       try {
         await draftMessageService.saveDraftOnBlur(conversationId, currentUser.id, message);
@@ -84,6 +126,18 @@ export const MessageInput = ({
       }
     }
   };
+
+  // Cleanup on unmount or conversation change
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (conversationId && isTyping) {
+        webSocketService.sendTypingStop(conversationId);
+      }
+    };
+  }, [conversationId, isTyping]);
 
   return (
     <div className="sticky bottom-0 border-gray-200 border-t bg-white p-2 sm:p-3 md:p-4 dark:border-gray-700 dark:bg-gray-800">

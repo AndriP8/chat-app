@@ -1,14 +1,22 @@
 import { useAuth } from '@/components/auth/AuthContext';
 import type { ChatRoom } from '@/types/chat';
+import type { User } from '@/types/database';
 import { formatMessageTime } from '@/utils/helpers';
+import { TypingIndicator } from './TypingIndicator';
 
 interface ChatRoomItemProps {
   room: ChatRoom;
   isSelected: boolean;
   onClick: () => void;
+  typingUsers?: User[];
 }
 
-export const ChatRoomItem = ({ room, isSelected, onClick }: ChatRoomItemProps) => {
+export const ChatRoomItem = ({
+  room,
+  isSelected,
+  onClick,
+  typingUsers = [],
+}: ChatRoomItemProps) => {
   const { currentUser } = useAuth();
 
   if (!currentUser) {
@@ -21,6 +29,9 @@ export const ChatRoomItem = ({ room, isSelected, onClick }: ChatRoomItemProps) =
 
   const lastMessage = room.lastMessage;
   const lastMessageTime = lastMessage ? formatMessageTime(new Date(lastMessage.createdAt)) : '';
+
+  const otherUsersTyping = typingUsers.filter((user) => user.id !== currentUser.id);
+  const isTyping = otherUsersTyping.length > 0;
 
   return (
     <button
@@ -58,15 +69,20 @@ export const ChatRoomItem = ({ room, isSelected, onClick }: ChatRoomItemProps) =
             )}
           </div>
 
-          {/* Last message */}
-          {lastMessage && (
+          {isTyping ? (
             <div className="flex items-center gap-2">
-              <p className="flex-1 truncate text-gray-600 text-sm dark:text-gray-400">
-                {room.participants.some((participant) => participant.id === lastMessage.senderId)
-                  ? lastMessage.content
-                  : `You: ${lastMessage.content}`}
-              </p>
+              <TypingIndicator typingUsers={typingUsers} currentUserId={currentUser.id} />
             </div>
+          ) : (
+            lastMessage && (
+              <div className="flex items-center gap-2">
+                <p className="flex-1 truncate text-gray-600 text-sm dark:text-gray-400">
+                  {room.participants.some((participant) => participant.id === lastMessage.senderId)
+                    ? lastMessage.content
+                    : `You: ${lastMessage.content}`}
+                </p>
+              </div>
+            )
           )}
         </div>
       </div>

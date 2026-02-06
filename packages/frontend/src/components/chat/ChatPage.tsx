@@ -1,7 +1,9 @@
 import { MessageCircle } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useWebSocketConversations } from '@/hooks/useWebSocketConversations';
+import { webSocketService } from '@/services/websocket';
 import type { ChatRoom } from '@/types/chat';
+import type { User } from '@/types/database';
 import { ChatHeader } from './ChatHeader';
 import { ChatSidebar } from './ChatSidebar';
 import { MessageInput } from './MessageInput';
@@ -10,6 +12,7 @@ import { OfflineIndicator } from './OfflineIndicator';
 
 export default function ChatPage() {
   const [currentRoom, setCurrentRoom] = useState<ChatRoom | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Record<string, User[]>>({});
   const messageListRef = useRef<MessageListHandle>(null);
   const {
     conversations,
@@ -50,13 +53,61 @@ export default function ChatPage() {
     setCurrentRoom(null);
   }, []);
 
+  // Handle typing events from WebSocket
+  useEffect(() => {
+    const handleUserTyping = (data: {
+      conversationId: string;
+      userId: string;
+      userName: string;
+      isTyping: boolean;
+    }) => {
+      setTypingUsers((prev) => {
+        const conversationTyping = prev[data.conversationId] || [];
+
+        if (data.isTyping) {
+          if (!conversationTyping.find((u) => u.id === data.userId)) {
+            return {
+              ...prev,
+              [data.conversationId]: [
+                ...conversationTyping,
+                {
+                  id: data.userId,
+                  name: data.userName,
+                  email: '',
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                },
+              ],
+            };
+          }
+        } else {
+          const filtered = conversationTyping.filter((u) => u.id !== data.userId);
+          return {
+            ...prev,
+            [data.conversationId]: filtered,
+          };
+        }
+
+        return prev;
+      });
+    };
+
+    webSocketService.setEventHandlers({
+      onUserTyping: handleUserTyping,
+    });
+
+    return () => {
+      webSocketService.setEventHandlers({
+        onUserTyping: undefined,
+      });
+    };
+  }, []);
+
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-900">
       {/* Sidebar - Full width on mobile when no chat selected, hidden on mobile when chat selected */}
       <div
-        className={`h-full w-full flex-shrink-0 md:w-80 ${
-          currentRoom ? 'hidden md:block' : 'block'
-        }`}
+        className={`h-full w-full shrink-0 md:w-80 ${currentRoom ? 'hidden md:block' : 'block'}`}
       >
         <ChatSidebar
           rooms={conversations}
@@ -64,6 +115,7 @@ export default function ChatPage() {
           onRoomSelect={handleRoomSelect}
           isLoading={loading.conversations}
           messages={messages}
+          typingUsers={typingUsers}
         />
       </div>
 

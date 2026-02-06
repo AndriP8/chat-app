@@ -7,8 +7,19 @@ interface WebSocketMessage {
     | 'join_conversation'
     | 'leave_conversation'
     | 'message_delivered'
-    | 'message_read';
-  data: SendMessageData | ConversationData | MessageStatusData | Record<string, unknown>;
+    | 'message_read'
+    | 'typing_start'
+    | 'typing_stop';
+  data:
+    | SendMessageData
+    | ConversationData
+    | MessageStatusData
+    | TypingData
+    | Record<string, unknown>;
+}
+
+interface TypingData {
+  conversationId: string;
 }
 
 interface MessageStatusData {
@@ -37,14 +48,23 @@ interface WebSocketResponse {
     | 'connected'
     | 'joined_conversation'
     | 'message_status_updated'
-    | 'message_buffered';
+    | 'message_buffered'
+    | 'user_typing';
   data:
     | MessageResponseData
     | ErrorResponseData
     | ConnectedResponseData
     | JoinedConversationData
     | MessageStatusUpdatedData
-    | MessageBufferedData;
+    | MessageBufferedData
+    | UserTypingData;
+}
+
+interface UserTypingData {
+  conversationId: string;
+  userId: string;
+  userName: string;
+  isTyping: boolean;
 }
 
 interface MessageStatusUpdatedData {
@@ -85,6 +105,7 @@ export interface WebSocketEventHandlers {
   onError?: (error: string) => void;
   onStateChange?: (state: WebSocketState) => void;
   onMessageStatusUpdate?: (messageId: string, status: Message['status'], updatedBy: string) => void;
+  onUserTyping?: (data: UserTypingData) => void;
 }
 
 export class WebSocketService {
@@ -205,6 +226,11 @@ export class WebSocketService {
         this.eventHandlers.onMessageStatusUpdate?.(data.messageId, data.status, data.updatedBy);
         break;
       }
+      case 'user_typing': {
+        const data = response.data as UserTypingData;
+        this.eventHandlers.onUserTyping?.(data);
+        break;
+      }
       default:
         console.warn('Unknown WebSocket message type:', response.type);
     }
@@ -258,7 +284,6 @@ export class WebSocketService {
     this.ws.send(JSON.stringify(message));
   }
 
-  // Not used
   public leaveConversation(conversationId: string): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return;
@@ -300,6 +325,36 @@ export class WebSocketService {
       type: 'message_read',
       data: {
         messageId,
+        conversationId,
+      },
+    };
+
+    this.ws.send(JSON.stringify(message));
+  }
+
+  public sendTypingStart(conversationId: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    const message: WebSocketMessage = {
+      type: 'typing_start',
+      data: {
+        conversationId,
+      },
+    };
+
+    this.ws.send(JSON.stringify(message));
+  }
+
+  public sendTypingStop(conversationId: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    const message: WebSocketMessage = {
+      type: 'typing_stop',
+      data: {
         conversationId,
       },
     };
