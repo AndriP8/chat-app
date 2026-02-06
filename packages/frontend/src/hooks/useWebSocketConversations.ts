@@ -71,7 +71,9 @@ export function useWebSocketConversations(): UseConversationsReturn {
     async (message: DatabaseMessage) => {
       try {
         const messageKey = message.id || message.tempId;
-        if (!messageKey || processedMessagesRef.current.has(messageKey)) return;
+        if (!messageKey || processedMessagesRef.current.has(messageKey)) {
+          return;
+        }
 
         // Mark as processed
         processedMessagesRef.current.add(messageKey);
@@ -88,18 +90,22 @@ export function useWebSocketConversations(): UseConversationsReturn {
           updatedAt: ensureDate(message.updatedAt),
         };
 
-        if (message.tempId && sender.id === currentUser?.id) {
+        const shouldReplace = message.tempId && sender.id === currentUser?.id;
+
+        if (shouldReplace) {
           // Replace temporary message with server response in current conversation sender
+
           dispatch({
             type: 'REPLACE_TEMP_MESSAGE',
             payload: {
               conversationId: message.conversationId,
-              tempId: message.tempId,
+              tempId: message.tempId!, // Safe: shouldReplace guarantees tempId exists
               message: uiMessage,
             },
           });
         } else {
           // Add new message from sender to receiver conversation
+
           dispatch({
             type: 'ADD_MESSAGE',
             payload: {
@@ -365,6 +371,7 @@ export function useWebSocketConversations(): UseConversationsReturn {
         if (webSocketService.isConnected()) {
           joinConversation(conversationId);
         }
+
         await dataSyncer.sendMessage(conversationId, content, tempId, currentUser.id);
       } catch (err) {
         console.error('Failed to send message:', err);

@@ -167,6 +167,8 @@ export class DatabaseOperations {
       return await db.transaction('rw', [db.messages], async () => {
         const existingMessage = await db.messages.where('tempId').equals(tempId).first();
 
+        const existingTargetMessage = await db.messages.get(serverMessage.id);
+
         if (existingMessage) {
           await db.messages.delete(existingMessage.id);
         }
@@ -177,7 +179,12 @@ export class DatabaseOperations {
           updatedAt: serverMessage.updatedAt ? ensureDate(serverMessage.updatedAt) : new Date(),
           tempId: undefined,
         };
-        await db.messages.add(newMessage);
+
+        if (existingTargetMessage) {
+          await db.messages.update(serverMessage.id, newMessage);
+        } else {
+          await db.messages.add(newMessage);
+        }
 
         return newMessage;
       });

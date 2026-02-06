@@ -73,7 +73,7 @@ interface MessageStatusUpdatedData {
   updatedBy: string;
 }
 
-interface MessageBufferedData {
+export interface MessageBufferedData {
   tempId?: string;
   messageId: string;
   sequenceNumber?: number;
@@ -106,6 +106,7 @@ export interface WebSocketEventHandlers {
   onStateChange?: (state: WebSocketState) => void;
   onMessageStatusUpdate?: (messageId: string, status: Message['status'], updatedBy: string) => void;
   onUserTyping?: (data: UserTypingData) => void;
+  onMessageBuffered?: (data: MessageBufferedData) => void;
 }
 
 export class WebSocketService {
@@ -229,6 +230,11 @@ export class WebSocketService {
       case 'user_typing': {
         const data = response.data as UserTypingData;
         this.eventHandlers.onUserTyping?.(data);
+        break;
+      }
+      case 'message_buffered': {
+        const data = response.data as MessageBufferedData;
+        this.eventHandlers.onMessageBuffered?.(data);
         break;
       }
       default:

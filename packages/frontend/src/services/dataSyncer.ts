@@ -7,7 +7,7 @@ import { db } from './database';
 import { dbOps } from './databaseOperations';
 import { messageScheduler } from './messageScheduler';
 import { getNextSequenceNumber } from './sequenceNumber';
-import type { WebSocketService } from './websocket';
+import type { MessageBufferedData, WebSocketService } from './websocket';
 
 export interface SyncEvents {
   messageReceived: (message: Message) => void;
@@ -96,6 +96,7 @@ export class DataSyncer {
         },
         onMessageStatusUpdate: (messageId, status) =>
           this.handleMessageStatusUpdate({ messageId, status }),
+        onMessageBuffered: (data) => this.handleMessageBuffered(data),
       });
     } catch (error) {
       console.error('Failed to initialize WebSocket:', error);
@@ -150,6 +151,46 @@ export class DataSyncer {
       this.eventListeners.messageReceived?.(message);
     }
   };
+
+  /**
+   * Handle message buffered event from WebSocket
+   * This means the server has accepted the message but it's queued for delivery
+   */
+  private async handleMessageBuffered(data: MessageBufferedData): Promise<void> {
+    if (!data.tempId) {
+      console.warn('[DEBUG] message_buffered event missing tempId, cannot update local message');
+      return;
+    }
+
+    try {
+      const tempMessage = await dbOps.getMessageByTempId(data.tempId);
+
+      if (!tempMessage) {
+        return;
+      }
+
+      const updatedMessage: Message = {
+        ...tempMessage,
+        id: data.messageId,
+        status: 'sent',
+        sequenceNumber: data.sequenceNumber ?? tempMessage.sequenceNumber,
+        updatedAt: new Date(),
+      };
+
+      const replacedMessage = await dbOps.replaceTemporaryMessage(data.tempId, updatedMessage);
+
+      await messageScheduler.cleanupProcessedMessage(data.tempId);
+
+      broadcastChannelService.broadcastMessageReceived(replacedMessage);
+
+      this.eventListeners.messageReceived?.({
+        ...replacedMessage,
+        tempId: data.tempId,
+      });
+    } catch (error) {
+      console.error('Error handling message_buffered:', error);
+    }
+  }
 
   /**
    * Handle message status update from WebSocket
