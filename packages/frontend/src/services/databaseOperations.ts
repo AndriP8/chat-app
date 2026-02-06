@@ -61,87 +61,65 @@ export class DatabaseOperations {
     }
   }
 
-  /**
-   * Helper method to get the last message for each conversation
-   */
-  private async getLastMessagesByConversation(
-    conversationId: string
-  ): Promise<(Message & { sender: User }) | null> {
-    try {
-      // Get all messages for this conversation, sorted by createdAt ascending
-      const allMessages = await db.messages
-        .where('conversationId')
-        .equals(conversationId)
-        .sortBy('createdAt');
-
-      const lastMessage = allMessages[allMessages.length - 1];
-      if (!lastMessage) {
-        return null;
-      }
-
-      const sender = await this.getUser(lastMessage.senderId);
-      if (!sender) {
-        return null;
-      }
-
-      const messageWithSender = {
-        ...lastMessage,
-        sender,
-      };
-
-      return messageWithSender;
-    } catch (error) {
-      throw new Error(`Failed to get last message by conversation: ${error}`);
-    }
-  }
-
   async getUserConversations(
     userId: string
   ): Promise<
     Array<Conversation & { participants: User[]; lastMessage: (Message & { sender: User }) | null }>
   > {
     try {
-      const conversationUser: ConversationParticipant | undefined =
-        await db.conversation_participants.where('userId').equals(userId).first();
+      const userParticipations = await db.conversation_participants
+        .where('userId')
+        .equals(userId)
+        .toArray();
 
-      if (!conversationUser) {
+      if (userParticipations.length === 0) {
         return [];
       }
 
-      const conversationId = conversationUser.conversationId;
+      const conversationIds = userParticipations.map((p) => p.conversationId);
 
-      const [conversations, allParticipantRecords, lastMessage] = await Promise.all([
-        // Get conversations
-        db.conversations
-          .where('id')
-          .equals(conversationId)
-          .toArray(),
+      const [conversations, allParticipants, allMessages] = await Promise.all([
+        db.conversations.where('id').anyOf(conversationIds).toArray(),
 
-        // Get all conversation participants
-        db.conversation_participants
-          .where('conversationId')
-          .equals(conversationId)
-          .toArray(),
+        db.conversation_participants.where('conversationId').anyOf(conversationIds).toArray(),
 
-        // Get last message for each conversation
-        this.getLastMessagesByConversation(conversationId),
+        db.messages.where('conversationId').anyOf(conversationIds).sortBy('createdAt'),
       ]);
 
-      const userIds = allParticipantRecords.map((p) => p.userId);
+      const userIds = [...new Set(allParticipants.map((p) => p.userId))];
       const users = await this.getUsers(userIds);
       const userMap = new Map(users.map((u) => [u.id, u]));
 
-      const participants = allParticipantRecords.reduce<User[]>((acc, p) => {
+      const participantsByConv = allParticipants.reduce<Record<string, User[]>>((acc, p) => {
         const user = userMap.get(p.userId);
-        if (user) acc.push(user);
+        if (user) {
+          if (!acc[p.conversationId]) acc[p.conversationId] = [];
+          acc[p.conversationId].push(user);
+        }
         return acc;
-      }, []);
+      }, {});
 
-      return conversations.map((conversation) => ({
-        ...conversation,
-        participants,
-        lastMessage: lastMessage,
-      }));
+      const messagesByConv = allMessages.reduce<Record<string, Message[]>>((acc, msg) => {
+        if (!acc[msg.conversationId]) acc[msg.conversationId] = [];
+        acc[msg.conversationId].push(msg);
+        return acc;
+      }, {});
+
+      return conversations.map((conversation) => {
+        const messages = messagesByConv[conversation.id] || [];
+        const lastMessage = messages[messages.length - 1];
+
+        return {
+          ...conversation,
+          participants: participantsByConv[conversation.id] || [],
+          lastMessage: lastMessage
+            ? {
+                ...lastMessage,
+                sender: userMap.get(lastMessage.senderId)!,
+              }
+            : null,
+        };
+      });
     } catch (error) {
       throw new Error(`Failed to get user conversations: ${error}`);
     }
@@ -633,20 +611,21 @@ export class DatabaseOperations {
         .and((message) => message.tempId !== undefined)
         .toArray();
 
-      const sending = tempMessages.filter((m) => m.status === 'sending').length;
-      const failed = tempMessages.filter((m) => m.status === 'failed').length;
+      const stats = tempMessages.reduce(
+        (acc, message) => {
+          acc.total++;
+          if (message.status === 'sending') acc.sending++;
+          if (message.status === 'failed') acc.failed++;
 
-      const oldestAge =
-        tempMessages.length > 0
-          ? Math.max(...tempMessages.map((m) => Date.now() - ensureDate(m.createdAt).getTime()))
-          : null;
+          const age = Date.now() - ensureDate(message.createdAt).getTime();
+          acc.oldestAge = acc.oldestAge === null ? age : Math.max(acc.oldestAge, age);
 
-      return {
-        total: tempMessages.length,
-        sending,
-        failed,
-        oldestAge,
-      };
+          return acc;
+        },
+        { total: 0, sending: 0, failed: 0, oldestAge: null as number | null }
+      );
+
+      return stats;
     } catch (error) {
       console.error(`Failed to get temporary message stats: ${error}`);
       return { total: 0, sending: 0, failed: 0, oldestAge: null };
