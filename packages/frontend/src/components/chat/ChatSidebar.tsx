@@ -20,36 +20,32 @@ export const ChatSidebar = ({
   messages,
   typingUsers = {},
 }: ChatSidebarProps) => {
-  const roomsWithLatestMessages = useMemo(() => {
-    return rooms.map((room) => {
-      const roomMessages = messages[room.id];
-      if (roomMessages && roomMessages.length > 0) {
-        const latestMessage = [...roomMessages].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )[0];
-
-        if (latestMessage) {
-          return {
-            ...room,
-            lastMessage: {
-              id: latestMessage.id,
-              content: latestMessage.content,
-              senderId: latestMessage.senderId,
-              conversationId: latestMessage.conversationId,
-              status: latestMessage.status,
-              createdAt: latestMessage.createdAt,
-              updatedAt: latestMessage.updatedAt,
-              sender: latestMessage.sender,
-            },
-            updatedAt: new Date(latestMessage.createdAt).toISOString(),
-          };
-        }
-      }
-      return room;
-    });
-  }, [rooms, messages]);
   const sortedRooms = useMemo(() => {
-    return [...roomsWithLatestMessages].sort((a, b) => {
+    const processedRooms = rooms.map((room) => {
+      const roomMessages = messages[room.id];
+      if (!roomMessages?.length) return room;
+
+      const latestMessage = roomMessages.reduce((latest, current) =>
+        current.createdAt > latest.createdAt ? current : latest
+      );
+
+      return {
+        ...room,
+        lastMessage: {
+          id: latestMessage.id,
+          content: latestMessage.content,
+          senderId: latestMessage.senderId,
+          conversationId: latestMessage.conversationId,
+          status: latestMessage.status,
+          createdAt: latestMessage.createdAt,
+          updatedAt: latestMessage.updatedAt,
+          sender: latestMessage.sender,
+        },
+        updatedAt: new Date(latestMessage.createdAt).toISOString(),
+      };
+    });
+
+    return processedRooms.sort((a, b) => {
       const aTime = a.lastMessage
         ? new Date(a.lastMessage.createdAt).getTime()
         : new Date(a.updatedAt).getTime();
@@ -58,7 +54,7 @@ export const ChatSidebar = ({
         : new Date(b.updatedAt).getTime();
       return bTime - aTime;
     });
-  }, [roomsWithLatestMessages]);
+  }, [rooms, messages]);
 
   return (
     <div className="flex h-full w-full flex-col border-gray-200 border-r bg-white dark:border-gray-700 dark:bg-gray-800">

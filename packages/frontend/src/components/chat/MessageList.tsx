@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type React from 'react';
-import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { webSocketService } from '@/services/websocket';
 import type { UIMessage } from '@/types/chat';
 import { useAuth } from '../auth/AuthContext';
@@ -168,27 +168,29 @@ export const MessageList = ({
     }
   }, [messages.length, messages, currentUser, conversationId]);
 
-  // Mark messages as read when they are displayed (only visible items in virtualizer)
-  // This handles old messages when user scrolls up to read history
-  useEffect(() => {
-    if (!conversationId || !currentUser || messages.length === 0) return;
+  const visibleUnreadMessages = useMemo(() => {
+    if (!conversationId || !currentUser || messages.length === 0) return [];
+
     const visibleIndexes = new Set(virtualizer.getVirtualItems().map((item) => item.index));
 
-    // Filter for visible unread messages only
-    const unreadMessages = messages.filter(
+    return messages.filter(
       (message, index) =>
         visibleIndexes.has(index) &&
         message.senderId !== currentUser.id &&
         message.status !== 'read'
     );
+  }, [messages, currentUser, conversationId, virtualizer]);
 
-    for (const message of unreadMessages) {
+  useEffect(() => {
+    if (!conversationId) return;
+
+    for (const message of visibleUnreadMessages) {
       if (!markedAsReadRef.current.has(message.id)) {
         markedAsReadRef.current.add(message.id);
         webSocketService.markMessageRead(message.id, conversationId);
       }
     }
-  }, [messages, currentUser, conversationId, virtualizer]);
+  }, [visibleUnreadMessages, conversationId]);
 
   // Clear tracking set when switching conversations
   const prevConversationIdRef = useRef(conversationId);
