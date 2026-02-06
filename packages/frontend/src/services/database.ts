@@ -305,6 +305,19 @@ class ChatDatabase extends Dexie {
           });
       });
 
+    // Version 4: Add compound indexes for pagination optimization
+    this.version(4).stores({
+      users: 'id, email, name, createdAt',
+      conversations: 'id, createdBy, createdAt, updatedAt',
+      messages:
+        'id, conversationId, senderId, status, createdAt, tempId, [conversationId+senderId+sequenceNumber], [conversationId+createdAt], [conversationId+id]',
+      conversation_participants: '[conversationId+userId], conversationId, userId',
+      draft_messages: 'id, conversationId, userId, [conversationId+userId], updatedAt',
+      send_message_requests: 'id, messageId, status, createdAt, lastSentAt',
+      sequence_counters: '[conversationId+userId], conversationId, userId, updatedAt',
+      pagination_metadata: 'conversationId, updatedAt',
+    });
+
     // Add hooks for automatic timestamp updates (using camelCase)
     this.users.hook('creating', (_primKey, obj, _trans) => {
       if (!obj.createdAt) obj.createdAt = new Date();
