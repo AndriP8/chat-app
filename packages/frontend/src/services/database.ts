@@ -52,10 +52,19 @@ class ChatDatabase extends Dexie {
       })
       .upgrade(async (tx) => {
         // Migrate users table
+        type OldUser = Partial<{
+          created_at: Date;
+          updated_at: Date;
+          profile_picture_url: string;
+          is_demo: boolean;
+          password_hash: string;
+        }> &
+          Partial<User>;
+
         await tx
           .table('users')
           .toCollection()
-          .modify((user: any) => {
+          .modify((user: OldUser) => {
             if (user.created_at) {
               user.createdAt = user.created_at;
               delete user.created_at;
@@ -79,10 +88,17 @@ class ChatDatabase extends Dexie {
           });
 
         // Migrate conversations table
+        type OldConversation = Partial<{
+          created_by: string;
+          created_at: Date;
+          updated_at: Date;
+        }> &
+          Partial<Conversation>;
+
         await tx
           .table('conversations')
           .toCollection()
-          .modify((conversation: any) => {
+          .modify((conversation: OldConversation) => {
             if (conversation.created_by) {
               conversation.createdBy = conversation.created_by;
               delete conversation.created_by;
@@ -98,10 +114,19 @@ class ChatDatabase extends Dexie {
           });
 
         // Migrate messages table
+        type OldMessage = Partial<{
+          conversation_id: string;
+          sender_id: string;
+          created_at: Date;
+          updated_at: Date;
+          sequence_number: number;
+        }> &
+          Partial<Message>;
+
         await tx
           .table('messages')
           .toCollection()
-          .modify((message: any) => {
+          .modify((message: OldMessage) => {
             if (message.conversation_id) {
               message.conversationId = message.conversation_id;
               delete message.conversation_id;
@@ -125,10 +150,16 @@ class ChatDatabase extends Dexie {
           });
 
         // Migrate conversation_participants table
+        type OldParticipant = Partial<{
+          conversation_id: string;
+          user_id: string;
+        }> &
+          Partial<ConversationParticipant>;
+
         await tx
           .table('conversation_participants')
           .toCollection()
-          .modify((participant: any) => {
+          .modify((participant: OldParticipant) => {
             if (participant.conversation_id) {
               participant.conversationId = participant.conversation_id;
               delete participant.conversation_id;
@@ -140,10 +171,18 @@ class ChatDatabase extends Dexie {
           });
 
         // Migrate draft_messages table
+        type OldDraft = Partial<{
+          conversation_id: string;
+          user_id: string;
+          created_at: Date;
+          updated_at: Date;
+        }> &
+          Partial<DraftMessage>;
+
         await tx
           .table('draft_messages')
           .toCollection()
-          .modify((draft: any) => {
+          .modify((draft: OldDraft) => {
             if (draft.conversation_id) {
               draft.conversationId = draft.conversation_id;
               delete draft.conversation_id;
@@ -163,10 +202,19 @@ class ChatDatabase extends Dexie {
           });
 
         // Migrate send_message_requests table
+        type OldRequest = Partial<{
+          message_id: string;
+          last_sent_at: Date;
+          retry_count: number;
+          error_message: string;
+          created_at: Date;
+        }> &
+          Partial<SendMessageRequest>;
+
         await tx
           .table('send_message_requests')
           .toCollection()
-          .modify((request: any) => {
+          .modify((request: OldRequest) => {
             if (request.message_id) {
               request.messageId = request.message_id;
               delete request.message_id;
@@ -190,10 +238,18 @@ class ChatDatabase extends Dexie {
           });
 
         // Migrate sequence_counters table
+        type OldCounter = Partial<{
+          conversation_id: string;
+          user_id: string;
+          next_sequence: number;
+          updated_at: Date;
+        }> &
+          Partial<SequenceCounter>;
+
         await tx
           .table('sequence_counters')
           .toCollection()
-          .modify((counter: any) => {
+          .modify((counter: OldCounter) => {
             if (counter.conversation_id) {
               counter.conversationId = counter.conversation_id;
               delete counter.conversation_id;
@@ -213,10 +269,19 @@ class ChatDatabase extends Dexie {
           });
 
         // Migrate pagination_metadata table
+        type OldMetadata = Partial<{
+          conversation_id: string;
+          has_more: boolean;
+          next_cursor: string;
+          last_message_id: string;
+          updated_at: Date;
+        }> &
+          Partial<PaginationMetadata>;
+
         await tx
           .table('pagination_metadata')
           .toCollection()
-          .modify((metadata: any) => {
+          .modify((metadata: OldMetadata) => {
             if (metadata.conversation_id) {
               metadata.conversationId = metadata.conversation_id;
               delete metadata.conversation_id;
