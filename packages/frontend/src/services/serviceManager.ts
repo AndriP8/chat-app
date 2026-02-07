@@ -75,6 +75,8 @@ export async function initializeDataSync(config?: DataSyncConfig): Promise<void>
  */
 export function shutdownDataSync(): void {
   try {
+    webSocketService.disconnect();
+
     dataSyncer.shutdown();
   } catch (error) {
     console.error('Error during Data Sync layer shutdown:', error);

@@ -46,6 +46,7 @@ export const MessageList = ({
   const isLoadingMoreRef = useRef(false);
   const hasInitiallyScrolledRef = useRef(false);
   const markedAsReadRef = useRef<Set<string>>(new Set());
+  const prevKnownMessageIdsRef = useRef<Set<string>>(new Set());
 
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -149,12 +150,11 @@ export const MessageList = ({
   useEffect(() => {
     if (!conversationId || !currentUser || messages.length === 0) return;
 
-    const previousLength = prevMessagesLengthRef.current;
-    const hasNewMessages = messages.length > previousLength;
+    const knownMessageIds = prevKnownMessageIdsRef.current;
 
-    if (hasNewMessages) {
-      const newMessages = messages.slice(previousLength);
+    const newMessages = messages.filter((msg) => !knownMessageIds.has(msg.id));
 
+    if (newMessages.length > 0) {
       const newUnreadMessages = newMessages.filter(
         (message) => message.senderId !== currentUser.id && message.status !== 'read'
       );
@@ -165,8 +165,12 @@ export const MessageList = ({
           webSocketService.markMessageRead(message.id, conversationId);
         }
       }
+
+      for (const msg of newMessages) {
+        knownMessageIds.add(msg.id);
+      }
     }
-  }, [messages.length, messages, currentUser, conversationId]);
+  }, [messages, currentUser, conversationId]);
 
   const visibleUnreadMessages = useMemo(() => {
     if (!conversationId || !currentUser || messages.length === 0) return [];
@@ -192,11 +196,12 @@ export const MessageList = ({
     }
   }, [visibleUnreadMessages, conversationId]);
 
-  // Clear tracking set when switching conversations
+  // Clear tracking sets when switching conversations
   const prevConversationIdRef = useRef(conversationId);
   useEffect(() => {
     if (prevConversationIdRef.current !== conversationId) {
       markedAsReadRef.current.clear();
+      prevKnownMessageIdsRef.current.clear();
       prevConversationIdRef.current = conversationId;
     }
   }, [conversationId]);

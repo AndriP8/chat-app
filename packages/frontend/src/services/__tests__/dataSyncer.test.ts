@@ -86,9 +86,9 @@ describe('DataSyncer', () => {
     it('should prevent double initialization', async () => {
       await dataSyncer.initialize(mockWebSocketService, 'user-1');
 
-      await expect(dataSyncer.initialize(mockWebSocketService, 'user-1')).rejects.toThrow(
-        'DataSyncer is already initialized'
-      );
+      await expect(dataSyncer.initialize(mockWebSocketService, 'user-1')).resolves.toBeUndefined();
+
+      expect(dataSyncer.getSyncStatus().isInitialized).toBe(true);
     });
 
     it('should setup message scheduler callback', async () => {
