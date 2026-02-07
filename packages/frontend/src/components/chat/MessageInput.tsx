@@ -16,9 +16,9 @@ export const MessageInput = ({
   conversationId,
 }: MessageInputProps) => {
   const [message, setMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -47,9 +47,9 @@ export const MessageInput = ({
       onSendMessage(trimmedMessage);
 
       // Stop typing indicator
-      if (conversationId && isTyping) {
+      if (conversationId && isTypingRef.current) {
         webSocketService.sendTypingStop(conversationId);
-        setIsTyping(false);
+        isTypingRef.current = false;
       }
 
       try {
@@ -82,25 +82,25 @@ export const MessageInput = ({
     // Handle typing indicator
     if (conversationId) {
       // Start typing if transitioning from empty to non-empty
-      if (newValue.trim() && !previousValue.trim() && !isTyping) {
+      if (newValue.trim() && !previousValue.trim() && !isTypingRef.current) {
         webSocketService.sendTypingStart(conversationId);
-        setIsTyping(true);
+        isTypingRef.current = true;
       }
 
       // Stop typing if input becomes empty
-      if (!newValue.trim() && isTyping) {
+      if (!newValue.trim() && isTypingRef.current) {
         webSocketService.sendTypingStop(conversationId);
-        setIsTyping(false);
+        isTypingRef.current = false;
       }
 
       // Auto-stop typing after 3 seconds of inactivity
-      if (newValue.trim() && isTyping) {
+      if (newValue.trim() && isTypingRef.current) {
         if (typingTimeoutRef.current) {
           clearTimeout(typingTimeoutRef.current);
         }
         typingTimeoutRef.current = setTimeout(() => {
           webSocketService.sendTypingStop(conversationId);
-          setIsTyping(false);
+          isTypingRef.current = false;
         }, 3000);
       }
     }
@@ -113,9 +113,9 @@ export const MessageInput = ({
 
   const handleBlur = async () => {
     // Stop typing indicator on blur
-    if (conversationId && isTyping) {
+    if (conversationId && isTypingRef.current) {
       webSocketService.sendTypingStop(conversationId);
-      setIsTyping(false);
+      isTypingRef.current = false;
     }
 
     if (conversationId && currentUser?.id) {
@@ -133,11 +133,11 @@ export const MessageInput = ({
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      if (conversationId && isTyping) {
+      if (conversationId && isTypingRef.current) {
         webSocketService.sendTypingStop(conversationId);
       }
     };
-  }, [conversationId, isTyping]);
+  }, [conversationId]);
 
   return (
     <div className="sticky bottom-0 border-gray-200 border-t bg-white p-2 sm:p-3 md:p-4 dark:border-gray-700 dark:bg-gray-800">
