@@ -165,7 +165,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+                className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
                 disabled={isSubmitting}
               >
                 {showPassword ? (
@@ -197,7 +197,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={isSubmitting || authState.isLoading}
-            className="flex w-full items-center justify-center rounded-lg border border-transparent bg-blue-600 px-4 py-3 font-medium text-sm text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full cursor-pointer items-center justify-center rounded-lg border border-transparent bg-blue-600 px-4 py-3 font-medium text-sm text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting || authState.isLoading ? (
               <>

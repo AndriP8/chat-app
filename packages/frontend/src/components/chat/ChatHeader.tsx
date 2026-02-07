@@ -24,7 +24,7 @@ export const ChatHeader = ({ room, onBackToList }: ChatHeaderProps) => {
           <button
             type="button"
             onClick={onBackToList}
-            className="shrink-0 rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 md:hidden dark:text-gray-300 dark:hover:bg-gray-700"
+            className="shrink-0 cursor-pointer rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 md:hidden dark:text-gray-300 dark:hover:bg-gray-700"
             aria-label="Back to conversations"
           >
             <ArrowLeft size={20} />

@@ -42,7 +42,7 @@ export function InstallPrompt() {
     <div className="slide-in-from-bottom fixed right-4 bottom-4 left-4 z-50 animate-in rounded-lg border border-gray-200 bg-white p-4 shadow-lg duration-300 md:right-4 md:left-auto md:w-96">
       <button
         onClick={handleDismiss}
-        className="absolute top-2 right-2 text-gray-400 transition-colors hover:text-gray-600"
+        className="absolute top-2 right-2 cursor-pointer text-gray-400 transition-colors hover:text-gray-600"
         aria-label="Dismiss"
         type="button"
       >
@@ -58,14 +58,14 @@ export function InstallPrompt() {
         <div className="flex gap-2">
           <button
             onClick={handleInstall}
-            className="flex-1 rounded-md bg-blue-500 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600"
+            className="flex-1 cursor-pointer rounded-md bg-blue-500 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600"
             type="button"
           >
             Install
           </button>
           <button
             onClick={handleDismiss}
-            className="px-4 py-2 font-medium text-gray-600 transition-colors hover:text-gray-800"
+            className="cursor-pointer px-4 py-2 font-medium text-gray-600 transition-colors hover:text-gray-800"
             type="button"
           >
             Not now

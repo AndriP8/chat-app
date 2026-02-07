@@ -159,7 +159,7 @@ export const MessageInput = ({
         <button
           type="submit"
           disabled={!message.trim()}
-          className="shrink-0 rounded-full bg-blue-500 p-3 text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 cursor-pointer rounded-full bg-blue-500 p-3 text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Send message"
         >
           <SendHorizonal size={18} />

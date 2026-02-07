@@ -104,7 +104,7 @@ export const HomePage = () => {
               type="button"
               onClick={handleTryDemo}
               disabled={isCreatingDemo}
-              className="group relative overflow-hidden rounded-lg bg-blue-600 px-8 py-4 font-semibold text-lg text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
+              className="group relative cursor-pointer overflow-hidden rounded-lg bg-blue-600 px-8 py-4 font-semibold text-lg text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isCreatingDemo ? (
                 <span className="flex items-center justify-center gap-2">

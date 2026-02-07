@@ -37,7 +37,7 @@ export const ChatRoomItem = ({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full border-l-4 p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${
+      className={`w-full cursor-pointer border-l-4 p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${
         isSelected
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
           : 'border-transparent hover:border-gray-200 dark:hover:border-gray-600'

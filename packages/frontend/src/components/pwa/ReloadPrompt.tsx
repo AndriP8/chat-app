@@ -43,14 +43,14 @@ export function ReloadPrompt() {
             <button
               type="button"
               onClick={() => updateServiceWorker(true)}
-              className="rounded bg-blue-500 px-3 py-1.5 font-medium text-sm text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="cursor-pointer rounded bg-blue-500 px-3 py-1.5 font-medium text-sm text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               Update
             </button>
             <button
               type="button"
               onClick={() => setNeedRefresh(false)}
-              className="rounded border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="cursor-pointer rounded border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               Later
             </button>

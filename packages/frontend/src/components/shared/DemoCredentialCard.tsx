@@ -62,7 +62,7 @@ export const DemoCredentialCard = ({ users, password, onClose }: DemoCredentialC
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <svg
               className="h-5 w-5"
@@ -106,7 +106,7 @@ export const DemoCredentialCard = ({ users, password, onClose }: DemoCredentialC
                   <button
                     type="button"
                     onClick={() => handleCopyEmail(user.email)}
-                    className="rounded px-2 py-1 text-blue-600 text-xs transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                    className="cursor-pointer rounded px-2 py-1 text-blue-600 text-xs transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
                   >
                     {copiedEmail === user.email ? '✓ Copied!' : 'Copy'}
                   </button>
@@ -122,7 +122,7 @@ export const DemoCredentialCard = ({ users, password, onClose }: DemoCredentialC
               type="button"
               onClick={() => handleLogin(user.email)}
               disabled={isLoggingIn !== null}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoggingIn === user.email ? (
                 <span className="flex items-center justify-center gap-2">
