@@ -145,7 +145,11 @@ export default function ChatPage() {
               isLoadingMore={loading.loadingMore[currentRoom.id] ?? false}
             />
             {/* Message Input */}
-            <MessageInput onSendMessage={handleSendMessage} conversationId={currentRoom.id} />
+            <MessageInput
+              key={currentRoom.id}
+              onSendMessage={handleSendMessage}
+              conversationId={currentRoom.id}
+            />
           </>
         ) : (
           /* Empty State */

@@ -27,9 +27,7 @@ export const MessageInput = ({
       try {
         const draft = await draftMessageService.getDraft(conversationId, currentUser.id);
         if (draft) {
-          setMessage(draft.content);
-        } else {
-          setMessage('');
+          setMessage((prev) => (prev ? prev : draft.content));
         }
       } catch (error) {
         console.error('Failed to load draft message:', error);
@@ -52,17 +50,17 @@ export const MessageInput = ({
         isTypingRef.current = false;
       }
 
-      try {
-        await draftMessageService.deleteDraft(conversationId, currentUser.id);
-      } catch (error) {
-        console.error('Failed to delete draft message:', error);
-      }
-
       setMessage('');
 
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
+      }
+
+      try {
+        await draftMessageService.deleteDraft(conversationId, currentUser.id);
+      } catch (error) {
+        console.error('Failed to delete draft message:', error);
       }
     }
   };
