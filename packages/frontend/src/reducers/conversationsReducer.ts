@@ -162,15 +162,25 @@ export function conversationsReducer(
       const { conversationId, tempId, message } = action.payload;
       const conversationMessages = state.messages[conversationId] || [];
 
+      const exists = conversationMessages.some(
+        (msg) => msg.tempId === tempId || (msg.isTemporary && msg.id === tempId)
+      );
+      let newMessages: typeof conversationMessages;
+      if (exists) {
+        newMessages = conversationMessages.map((msg) =>
+          msg.tempId === tempId || (msg.isTemporary && msg.id === tempId)
+            ? { ...message, isTemporary: false }
+            : msg
+        );
+      } else {
+        newMessages = [...conversationMessages, { ...message, isTemporary: false }];
+      }
+
       return {
         ...state,
         messages: {
           ...state.messages,
-          [conversationId]: conversationMessages.map((msg) =>
-            msg.tempId === tempId || (msg.isTemporary && msg.id === tempId)
-              ? { ...message, isTemporary: false }
-              : msg
-          ),
+          [conversationId]: newMessages,
         },
       };
     }
