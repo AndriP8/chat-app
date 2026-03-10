@@ -144,7 +144,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   await fastify.register(rateLimit, {
-    max: 5,
+    max: envConfig.NODE_ENV === 'production' ? 5 : 100,
     timeWindow: '1 hour',
     keyGenerator: (request) => {
       return request.ip;
