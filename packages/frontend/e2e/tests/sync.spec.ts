@@ -54,8 +54,6 @@ test.describe('Cross-Tab Synchronization', () => {
     await alicePage.locator('#message_content').fill('I am typing something...');
 
     // Bob should see Alice's typing indicator
-    // Assuming typing indicator has a text like "Alice Chen (Demo) is typing..." or similar
-    // We'll look for generic "typing" text in a specific element
     await expect(bobPage.locator('text=typing').first()).toBeVisible();
 
     // Alice stops typing (clears input)
