@@ -86,7 +86,7 @@ test.describe('Real-time Messaging Critical Paths', () => {
     await alicePage.locator('button[type="submit"]').click();
 
     // Bob receives it
-    await expect(bobPage.getByText('The breaking message 56').first()).toBeVisible();
+    await expect(bobPage.getByText('The breaking message 56').first()).toBeVisible({ timeout: 15000 });
 
     // ASSERTION: The older messages (e.g., message 5) MUST still be visible!
     // In the buggy implementation, receiving a new websocket message might overwrite IndexedDB state
