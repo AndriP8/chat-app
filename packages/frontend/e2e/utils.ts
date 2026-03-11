@@ -19,7 +19,12 @@ export interface DemoSetupResult {
 export async function setupDemoConversation(request: APIRequestContext): Promise<DemoSetupResult> {
   const API_URL = process.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
   const response = await request.post(`${API_URL}/auth/demo-user`);
-  expect(response.ok()).toBeTruthy();
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(
+      `Demo user setup failed: ${response.status()} ${response.statusText()}\nResponse: ${body}`
+    );
+  }
 
   const body = await response.json();
   expect(body.success).toBe(true);
