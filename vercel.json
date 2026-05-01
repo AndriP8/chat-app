@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm --filter @chat-app/frontend build",
+  "outputDirectory": "packages/frontend/dist",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "monorepoRoot": "."
+}
