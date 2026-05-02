@@ -17,7 +17,7 @@ A modern, full-stack 1:1 chat application demonstrating advanced real-time commu
 - 🔁 **Intelligent retry logic** with exponential backoff (up to 5 retries)
 - 📦 **Message ordering** with sequence numbers and server-side buffering
 - ✅ **Comprehensive test coverage** with Vitest (14 test suites)
-- 🐳 **Production deployment** with Docker, GitHub Actions CI/CD
+- 🚀 **Production deployment** with Vercel (frontend) + Fly.io (backend)
 - 🔐 **Secure authentication** with JWT and HTTP-only cookies
 
 ---
@@ -45,8 +45,8 @@ A modern, full-stack 1:1 chat application demonstrating advanced real-time commu
 - **Testing:** Vitest with integration tests
 
 ### DevOps & Tools
-- **Containerization:** Docker + Docker Compose
-- **CI/CD:** GitHub Actions (lint, type-check, build, deploy)
+- **Database:** Neon (PostgreSQL, managed)
+- **CI/CD:** GitHub Actions (lint, type-check, e2e, deploy to Fly.io)
 - **Code Quality:** Biome (linting + formatting)
 - **Package Manager:** pnpm workspaces (monorepo)
 - **Version Control:** Git with conventional commits
@@ -132,42 +132,43 @@ pnpm dev
 
 ---
 
-## 🐳 Docker Deployment
+## 🚀 Deployment
 
-### Quick Deploy
+### Frontend — Vercel
 
-```bash
-# Copy environment configuration
-cp .env.example .env
+Deployed automatically on push to `main`. Configure in Vercel dashboard:
 
-# Edit .env with production values
-# - Set strong JWT_SECRET and POSTGRES_PASSWORD
-# - Update CORS_ORIGIN, VITE_API_BASE_URL, VITE_WS_URL
-
-# Run deployment script
-./deploy.sh
+```env
+VITE_API_BASE_URL=https://chat-app-backend-flyio.fly.dev
+VITE_WS_URL=wss://chat-app-backend-flyio.fly.dev
 ```
 
-### Manual Docker Compose
+### Backend — Fly.io
 
 ```bash
-# Build and start all services
-docker compose up -d
+# First-time setup (from repo root)
+flyctl launch --config packages/backend/fly.toml --no-deploy
 
-# View logs
-docker compose logs -f
+# Set secrets
+flyctl secrets set \
+  DATABASE_URL="<neon-postgres-url>" \
+  JWT_SECRET="<openssl rand -hex 32>" \
+  BCRYPT_ROUNDS=12 \
+  CORS_ORIGIN="https://chat-app.andripurnomo.com"
 
-# Stop services
-docker compose down
+# Deploy manually
+flyctl deploy --config packages/backend/fly.toml
 ```
 
-### Services
+Automatic deploys on push to `main` via GitHub Actions (requires `FLY_API_TOKEN` secret).
 
-| Service    | Port | Description                          |
-|------------|------|--------------------------------------|
-| `postgres` | 5432 | PostgreSQL 17 database               |
-| `backend`  | 3001 | Fastify API + WebSocket server       |
-| `frontend` | 5173 | Nginx serving React SPA (port 80)    |
+### Database — Neon
+
+Free managed PostgreSQL at [neon.tech](https://neon.tech). After creating a project:
+
+```bash
+DATABASE_URL="<neon-url>" pnpm --filter @chat-app/backend db:push
+```
 
 ---
 
@@ -220,12 +221,12 @@ chat-app/
 │   ├── REQ-EXPLORATION.MD        # Requirements & architecture
 │   └── images/                   # Architecture diagrams
 │
-├── .github/workflows/            # CI/CD pipelines
-│   ├── ci.yml                    # Lint, type-check, build
-│   └── deploy.yml                # VPS deployment
+├── .github/workflows/
+│   └── ci.yml                    # Lint, type-check, e2e, deploy
 │
-├── docker-compose.yml            # Multi-container setup
-├── deploy.sh                     # Deployment automation script
+├── Dockerfile                    # Backend container (Fly.io)
+├── docker-compose.yml            # Local dev PostgreSQL only
+├── vercel.json                   # Vercel monorepo config
 └── pnpm-workspace.yaml           # Monorepo configuration
 ```
 
@@ -333,11 +334,11 @@ This project demonstrates proficiency in:
 - ✅ Scalable real-time communication design
 
 ### DevOps & Tooling
-- ✅ Docker containerization and orchestration
+- ✅ Cloud deployment with Vercel + Fly.io
 - ✅ CI/CD pipeline with GitHub Actions
 - ✅ Monorepo management with pnpm workspaces
 - ✅ Automated testing and code quality checks
-- ✅ Production deployment automation
+- ✅ Neon managed Postgres, environment secrets management
 
 ---
 
@@ -393,25 +394,16 @@ Default values work out of the box. No `.env` file needed for local development.
 
 ### Production
 
-Copy `.env.example` to `.env` and configure:
-
-```env
-# Security (REQUIRED)
-JWT_SECRET=<generate-with-openssl-rand-base64-32>
-POSTGRES_PASSWORD=<generate-with-openssl-rand-base64-32>
-BCRYPT_ROUNDS=12
-
-# URLs (REQUIRED)
-CORS_ORIGIN=https://chat.yourdomain.com
-VITE_API_BASE_URL=https://chat.yourdomain.com
-VITE_WS_URL=wss://chat.yourdomain.com
-
-# Optional
-NODE_ENV=production
-BUILD_TARGET=production
+**Backend (Fly.io secrets):**
+```bash
+flyctl secrets set DATABASE_URL="..." JWT_SECRET="..." BCRYPT_ROUNDS=12 CORS_ORIGIN="https://chat-app.andripurnomo.com"
 ```
 
-See [`.env.example`](./.env.example) for all available options.
+**Frontend (Vercel dashboard env vars):**
+```
+VITE_API_BASE_URL=https://chat-app-backend-flyio.fly.dev
+VITE_WS_URL=wss://chat-app-backend-flyio.fly.dev
+```
 
 ---
 
@@ -419,28 +411,20 @@ See [`.env.example`](./.env.example) for all available options.
 
 ### GitHub Actions Workflows
 
-**CI Pipeline** (`.github/workflows/ci.yml`):
+**CI Pipeline** (`.github/workflows/ci.yml`) on push to `main`:
 1. ✅ Lint with Biome
 2. ✅ Type check with TypeScript
 3. ✅ Build frontend and backend
-4. ✅ Upload build artifacts
+4. ✅ Playwright E2E tests
+5. 🚀 Deploy backend to Fly.io
 
-**Deployment** (`.github/workflows/deploy.yml`):
-1. 🔐 SSH to VPS
-2. 📥 Pull latest code
-3. 🔨 Rebuild Docker containers
-4. 🗄️ Run database migrations
-5. 🔄 Restart services
-6. ✅ Health check validation
+Vercel deploys the frontend automatically via its own GitHub integration.
 
 ### Required GitHub Secrets
 
-| Secret       | Description                    |
-|--------------|--------------------------------|
-| `VPS_SSH_KEY` | Private SSH key for VPS access |
-| `VPS_HOST`    | VPS IP address or domain       |
-| `VPS_USER`    | SSH username                   |
-| `APP_DIR`     | Application directory on VPS   |
+| Secret          | Description                          |
+|-----------------|--------------------------------------|
+| `FLY_API_TOKEN` | Fly.io deploy token (`flyctl tokens create deploy`) |
 
 ---
 
