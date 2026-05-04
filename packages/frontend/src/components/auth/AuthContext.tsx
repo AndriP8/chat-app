@@ -33,6 +33,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await authApi.login(loginData);
 
+      secureStorage.set('authToken', response.data.token);
+
       dispatch({
         type: 'AUTH_LOGIN_SUCCESS',
         payload: { user: response.data.user },
@@ -59,6 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       secureStorage.remove('minimalUserData');
+      secureStorage.remove('authToken');
       dispatch({ type: 'AUTH_LOGOUT' });
     }
   }, []);
@@ -76,6 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } catch (error) {
           if (error instanceof ApiError && error.status === 401) {
             secureStorage.remove('minimalUserData');
+            secureStorage.remove('authToken');
             dispatch({ type: 'AUTH_LOGOUT' });
           } else {
             console.warn('Auth validation failed:', error);

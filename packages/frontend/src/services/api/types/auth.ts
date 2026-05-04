@@ -3,8 +3,8 @@ import type { User } from '@/types';
 export interface AuthResponse {
   data: {
     user: User;
+    token: string;
   };
-  token: string;
 }
 
 export interface DemoUser {

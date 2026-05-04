@@ -32,11 +32,15 @@ export function createMockWebSocket(): WebSocket {
 }
 
 /**
- * Create a mock Fastify request with cookies
+ * Create a mock Fastify request
  */
-export function createMockRequest(cookies: Record<string, string> = {}) {
+export function createMockRequest(
+  cookies: Record<string, string> = {},
+  headers: Record<string, string> = {}
+) {
   return {
     cookies,
+    headers,
     user: undefined,
   };
 }

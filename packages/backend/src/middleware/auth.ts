@@ -22,9 +22,6 @@ declare module 'fastify' {
 }
 
 const JWT_SECRET = envConfig.JWT_SECRET;
-const COOKIE_CONFIG = {
-  AUTH_TOKEN: 'auth_token',
-};
 
 function verifyToken(token: string): JWTPayload {
   return jwt.verify(token, JWT_SECRET) as JWTPayload;
@@ -32,16 +29,16 @@ function verifyToken(token: string): JWTPayload {
 
 export async function authMiddleware(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   try {
-    // Get token from cookie
-    const token = request.cookies?.[COOKIE_CONFIG.AUTH_TOKEN];
-
-    if (!token) {
+    const authHeader = request.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
       return reply.status(401).send({
         success: false,
         error: 'Authorization token required',
         code: 'NO_TOKEN',
       });
     }
+
+    const token = authHeader.slice(7);
 
     // Verify token
     const payload = verifyToken(token);

@@ -88,24 +88,22 @@ describe('Auth Routes', () => {
       expect(isPasswordValid).toBe(false);
     });
 
-    it('should set httpOnly cookie on successful login', () => {
+    it('should return token in response body on successful login', () => {
       const reply = createMockReply();
       const token = generateTestToken(mockUsers.alice.id, mockUsers.alice.email);
 
-      reply.setCookie('auth_token', token, {
-        httpOnly: true,
-        secure: false, // test env
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/',
+      reply.send({
+        success: true,
+        data: {
+          user: { id: mockUsers.alice.id, email: mockUsers.alice.email },
+          token,
+        },
       });
 
-      expect(reply.setCookie).toHaveBeenCalledWith(
-        'auth_token',
-        token,
+      expect(reply.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          httpOnly: true,
-          sameSite: 'strict',
+          success: true,
+          data: expect.objectContaining({ token }),
         })
       );
     });
@@ -162,10 +160,11 @@ describe('Auth Routes', () => {
     });
 
     it('should reject request without token', () => {
-      const request = createMockRequest({});
+      const request = createMockRequest({}, {});
       const reply = createMockReply();
 
-      if (!request.cookies?.auth_token) {
+      const authHeader = request.headers?.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
         reply.status(401).send({
           success: false,
           error: 'Authorization token required',
@@ -231,12 +230,20 @@ describe('Auth Routes', () => {
   });
 
   describe('POST /logout', () => {
-    it('should clear auth cookie on logout', () => {
+    it('should return success message on logout', () => {
       const reply = createMockReply();
 
-      reply.clearCookie('auth_token', { path: '/' });
+      reply.send({
+        success: true,
+        message: 'Logged out successfully',
+      });
 
-      expect(reply.clearCookie).toHaveBeenCalledWith('auth_token', { path: '/' });
+      expect(reply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: 'Logged out successfully',
+        })
+      );
     });
 
     it('should return success message', () => {

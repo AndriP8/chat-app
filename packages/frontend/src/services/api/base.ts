@@ -1,3 +1,5 @@
+import { secureStorage } from '@/utils/helpers';
+
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 export interface ApiResponse<T = unknown> {
@@ -20,18 +22,18 @@ export class ApiError extends Error {
 export async function makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Default headers
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string>),
+  };
 
-  // Add existing headers
-  if (options.headers) {
-    Object.assign(headers, options.headers);
+  const token = secureStorage.get<string>('authToken', '');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const config: RequestInit = {
     ...options,
     headers,
-    credentials: 'include', // Include cookies in requests
   };
 
   try {

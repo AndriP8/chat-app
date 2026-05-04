@@ -146,7 +146,8 @@ export class WebSocketService {
       }
 
       this.setState('connecting');
-      const wsUrl = `${this.baseUrl}/ws`;
+      const storedToken: string = JSON.parse(localStorage.getItem('authToken') || 'null') ?? '';
+      const wsUrl = `${this.baseUrl}/ws${storedToken ? `?token=${encodeURIComponent(storedToken)}` : ''}`;
 
       try {
         this.ws = new WebSocket(wsUrl);

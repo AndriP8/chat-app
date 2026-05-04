@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import Fastify from 'fastify';
@@ -22,17 +21,6 @@ async function buildServer() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-  });
-
-  // Register cookie support
-  await fastify.register(cookie, {
-    secret: envConfig.JWT_SECRET,
-    parseOptions: {
-      httpOnly: true,
-      secure: envConfig.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    },
   });
 
   // Register WebSocket support

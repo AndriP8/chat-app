@@ -9,22 +9,8 @@ import { conversationParticipants, conversations, db, type User, users } from '@
 import { loginSchema, type UserResponse } from '@/schemas/auth';
 import { transformUserToResponse } from '@/utils/transformers';
 
-// JWT utilities
 const JWT_SECRET = envConfig.JWT_SECRET;
 const BCRYPT_ROUNDS = Number.parseInt(envConfig.BCRYPT_ROUNDS || '12', 10);
-
-// Cookie configuration
-const COOKIE_CONFIG = {
-  AUTH_TOKEN: 'auth_token',
-  REFRESH_TOKEN: 'refresh_token',
-  OPTIONS: {
-    httpOnly: true,
-    secure: envConfig.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-    path: '/',
-  },
-};
 
 interface JWTPayload {
   user_id: string;
@@ -76,15 +62,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
       const token = generateToken({ user_id: user.id, email: user.email });
 
-      reply.setCookie(COOKIE_CONFIG.AUTH_TOKEN, token, COOKIE_CONFIG.OPTIONS);
-
-      const response = {
-        user: formatUserResponse(user),
-      };
-
       return reply.send({
         success: true,
-        data: response,
+        data: {
+          user: formatUserResponse(user),
+          token,
+        },
       });
     } catch (_error) {
       return reply.status(500).send({
@@ -97,14 +80,15 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   // Get current user endpoint
   fastify.get('/me', async (request, reply) => {
     try {
-      const token = request.cookies?.[COOKIE_CONFIG.AUTH_TOKEN];
-      if (!token) {
+      const authHeader = request.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
         return reply.status(401).send({
           success: false,
           error: 'Authorization token required',
         });
       }
 
+      const token = authHeader.slice(7);
       const payload = verifyToken(token);
       const userId = payload.user_id;
 
@@ -132,11 +116,6 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Logout endpoint
   fastify.post('/logout', async (_request, reply) => {
-    // Clear the authentication cookie
-    reply.clearCookie(COOKIE_CONFIG.AUTH_TOKEN, {
-      path: COOKIE_CONFIG.OPTIONS.path,
-    });
-
     return reply.send({
       success: true,
       message: 'Logged out successfully',

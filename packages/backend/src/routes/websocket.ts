@@ -201,7 +201,7 @@ class ConnectionManager {
 const connectionManager = new ConnectionManager();
 
 async function authenticateWebSocket(request: FastifyRequest): Promise<AuthenticatedUser> {
-  const token = request.cookies?.auth_token;
+  const token = (request.query as Record<string, string>)?.token;
 
   if (!token) {
     throw new Error('No authentication token provided');

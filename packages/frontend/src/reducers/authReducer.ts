@@ -91,6 +91,7 @@ export const authReducer = (state: AuthState, action: AuthAction): AuthState => 
     case 'AUTH_LOGIN_FAILURE': {
       // Clear any persisted auth data on failure
       secureStorage.remove('minimalUserData');
+      secureStorage.remove('authToken');
 
       return {
         ...state,
@@ -104,6 +105,7 @@ export const authReducer = (state: AuthState, action: AuthAction): AuthState => 
     case 'AUTH_LOGOUT': {
       // Clear all persisted auth data
       secureStorage.remove('minimalUserData');
+      secureStorage.remove('authToken');
 
       return {
         ...state,
