@@ -57,8 +57,10 @@ export async function initializeDataSync(config?: DataSyncConfig): Promise<void>
       }
     }
 
-    // Connect WebSocket service
-    await webSocketService.connect();
+    // Connect WebSocket in background — don't await so a transient failure
+    // (e.g. cold-start 502) doesn't abort DataSyncer init. The WS reconnects
+    // automatically via onclose → scheduleReconnect.
+    webSocketService.connect().catch(() => {});
 
     // Initialize DataSyncer with the WebSocket adapter
     await dataSyncer.initialize(webSocketService, config?.currentUserId);

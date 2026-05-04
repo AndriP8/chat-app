@@ -28,7 +28,7 @@ export async function makeRequest<T>(endpoint: string, options: RequestInit = {}
 
   const token = secureStorage.get<string>('authToken', '');
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const config: RequestInit = {
